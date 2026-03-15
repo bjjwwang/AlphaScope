@@ -341,7 +341,7 @@ async function lookupScore() {
         <div style="font-size:48px;margin:16px 0;">?</div>
         <div class="score-label" style="color:var(--dim);">No scan data yet</div>
         <div class="score-reason">This stock hasn't been analyzed yet. Run a full AI scan to get its AlphaScore.</div>
-        <a class="score-cta" href="/app">Scan ${ticker} Now &rarr;</a>
+        <a class="score-cta" href="/app?ticker=${encodeURIComponent(ticker)}">Scan ${ticker} Now &rarr;</a>
       `;
       return;
     }
@@ -375,7 +375,7 @@ async function lookupScore() {
         <div class="score-detail"><div class="val">${d.bh_return >= 0 ? '+' : ''}${d.bh_return}%</div><div class="lbl">Buy & Hold</div></div>
         <div class="score-detail"><div class="val">${d.avg_win_rate}%</div><div class="lbl">Avg Win Rate</div></div>
       </div>
-      <a class="score-cta" href="/app">View Full Analysis &rarr;</a>
+      <a class="score-cta" href="/app?ticker=${encodeURIComponent(data.ticker)}">View Full Analysis &rarr;</a>
     `;
   } catch (e) {
     card.innerHTML = `<div style="color:var(--red);padding:20px;">Failed to load. Try again.</div>`;

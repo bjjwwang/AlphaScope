@@ -2758,6 +2758,15 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('#pageConfig select, #pageConfig input').forEach(el => {
     el.addEventListener('change', updateConfigPreview);
   });
+
+  // Auto-load ticker from URL param (e.g. /app?ticker=AAPL)
+  const _params = new URLSearchParams(window.location.search);
+  const _t = _params.get('ticker');
+  if (_t) {
+    document.getElementById('quickTicker').value = _t.toUpperCase();
+    goToPage('quick');
+    setTimeout(() => runQuickPredict(), 300);
+  }
 });
 
 // ===== QUICK PREDICT =====
