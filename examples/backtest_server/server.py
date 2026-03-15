@@ -124,6 +124,7 @@ _pitch_file = os.path.join(os.path.dirname(__file__), "..", "pitch.html")
 _slides_file = os.path.join(os.path.dirname(__file__), "..", "pitch_slides.html")
 _landing_cn_file = os.path.join(os.path.dirname(__file__), "..", "landing_cn.html")
 _slides_cn_file = os.path.join(os.path.dirname(__file__), "..", "pitch_slides_cn.html")
+_demo_video = os.path.join(os.path.dirname(__file__), "..", "Demo.mp4")
 
 
 @app.get("/")
@@ -173,6 +174,13 @@ async def slides_cn_page():
     if os.path.exists(_slides_cn_file):
         return FileResponse(_slides_cn_file, media_type="text/html")
     return {"error": "Chinese slides not found"}
+
+
+@app.get("/Demo.mp4")
+async def demo_video():
+    if os.path.exists(_demo_video):
+        return FileResponse(_demo_video, media_type="video/mp4")
+    return {"error": "Demo video not found"}
 
 
 def compute_alpha_score(model_results: list[dict]) -> dict:
