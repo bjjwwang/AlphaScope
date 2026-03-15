@@ -53,8 +53,8 @@ examples/
 ### 1. Install Qlib
 
 ```bash
-git clone https://github.com/bjjwwang/AlphaScope.git
-cd AlphaScope
+git clone https://github.com/bjjwwang/AlphaScout.git
+cd AlphaScout
 pip install -e ".[dev]"
 ```
 
