@@ -196,7 +196,8 @@ def test_module_importable(model_class, module_path, expected_class, data_type):
     except ImportError as e:
         err_msg = str(e)
         # These are OK — optional deps not installed
-        if "xgboost" in err_msg or "catboost" in err_msg:
+        optional = ("xgboost", "catboost", "torch", "pytorch")
+        if any(dep in err_msg for dep in optional):
             pytest.skip(f"Optional dependency not installed: {err_msg}")
         else:
             raise
