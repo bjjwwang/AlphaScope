@@ -1,0 +1,2843 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AlphaScout — AI Stock Signal Platform</title>
+<style>
+  :root {
+    --bg: #0d1117; --card: #161b22; --card2: #1c2333;
+    --border: #30363d; --border-light: #3d444d;
+    --text: #c9d1d9; --text-dim: #8b949e; --text-bright: #e6edf3;
+    --accent: #58a6ff; --accent2: #3fb950; --accent3: #d29922;
+    --danger: #f85149; --purple: #bc8cff; --pink: #f778ba;
+    --input-bg: #0d1117; --hover: #1f2937;
+    --step-done: #3fb950; --step-active: #58a6ff; --step-error: #f85149;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    background: var(--bg); color: var(--text); line-height: 1.6;
+    overflow-x: hidden;
+  }
+
+  /* ===== HEADER ===== */
+  .header {
+    background: var(--card); border-bottom: 1px solid var(--border);
+    padding: 14px 32px; display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 100;
+  }
+  .header h1 { font-size: 18px; font-weight: 600; display: flex; align-items: center; gap: 10px; }
+  .header h1 .logo {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .header-right { display: flex; align-items: center; gap: 16px; }
+  .header .status { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-dim); }
+  .header .status .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent2); }
+
+  /* ===== PAGE NAVIGATION ===== */
+  .page-nav {
+    display: flex; gap: 2px; background: var(--bg); border: 1px solid var(--border);
+    border-radius: 8px; padding: 3px;
+  }
+  .page-nav-btn {
+    padding: 6px 16px; border-radius: 6px; border: none; background: transparent;
+    color: var(--text-dim); font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s;
+  }
+  .page-nav-btn:hover { color: var(--text); }
+  .page-nav-btn.active { background: var(--accent); color: #fff; font-weight: 600; }
+  .page-nav-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* ===== PAGE CONTAINER ===== */
+  .page { display: none; min-height: calc(100vh - 57px); }
+  .page.active { display: block; }
+
+  /* ===== CONFIG PAGE ===== */
+  .config-page { padding: 24px 32px; max-width: 1400px; margin: 0 auto; }
+  .config-page h2 { font-size: 22px; font-weight: 600; margin-bottom: 6px; color: var(--text-bright); }
+  .config-page .subtitle { color: var(--text-dim); font-size: 14px; margin-bottom: 24px; }
+
+  .config-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media (max-width: 1000px) { .config-grid { grid-template-columns: 1fr; } }
+
+  .config-section {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 20px 24px; position: relative;
+  }
+  .config-section.full-width { grid-column: 1 / -1; }
+
+  .section-header {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 16px;
+    padding-bottom: 12px; border-bottom: 1px solid var(--border);
+  }
+  .section-num {
+    background: var(--accent); color: var(--bg); width: 24px; height: 24px;
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; flex-shrink: 0;
+  }
+  .section-header h3 { font-size: 15px; font-weight: 600; color: var(--text-bright); }
+  .section-header .section-desc { font-size: 12px; color: var(--text-dim); margin-left: auto; }
+
+  /* ===== FORM CONTROLS ===== */
+  label { display: block; font-size: 12px; color: var(--text-dim); margin-bottom: 4px; font-weight: 500; }
+  select, input[type="text"], input[type="number"], input[type="date"] {
+    width: 100%; background: var(--input-bg); border: 1px solid var(--border);
+    border-radius: 6px; padding: 8px 10px; color: var(--text); font-size: 13px;
+    outline: none; transition: border-color 0.2s;
+  }
+  select:focus, input:focus { border-color: var(--accent); }
+  select { cursor: pointer; }
+  .form-row { margin-bottom: 12px; }
+  .form-row-inline { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+  .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+
+  /* hint text */
+  .hint { font-size: 11px; color: var(--text-dim); margin-top: 3px; line-height: 1.4; }
+  .hint-box {
+    background: #58a6ff0a; border: 1px solid #58a6ff22; border-radius: 8px;
+    padding: 10px 14px; margin-top: 10px; font-size: 12px; color: var(--text-dim); line-height: 1.6;
+  }
+  .hint-box strong { color: var(--accent); font-weight: 600; }
+
+  /* Model cards */
+  .model-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; margin-bottom: 12px; }
+  .model-card {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 14px; cursor: pointer; transition: all 0.2s; position: relative;
+  }
+  .model-card:hover { border-color: var(--accent); background: var(--hover); }
+  .model-card.selected { border-color: var(--accent); background: #58a6ff11; box-shadow: 0 0 0 1px var(--accent); }
+  .model-card.unavailable { opacity: 0.4; cursor: not-allowed; }
+  .model-card.unavailable:hover { border-color: var(--border); background: var(--card); }
+  .model-card .unavail-badge { font-size: 10px; color: var(--danger); margin-top: 4px; }
+  .model-card .model-name { font-size: 13px; font-weight: 600; color: var(--text-bright); margin-bottom: 2px; }
+  .model-card .model-brief { font-size: 11px; color: var(--text-dim); line-height: 1.4; }
+  .model-card .model-tags { margin-top: 6px; display: flex; gap: 4px; flex-wrap: wrap; }
+  .model-card .mtag {
+    font-size: 9px; padding: 1px 6px; border-radius: 3px; font-weight: 600;
+  }
+  .mtag.gpu { background: #ee4c2c22; color: #ee4c2c; }
+  .mtag.cpu { background: #3fb95022; color: var(--accent2); }
+  .mtag.ts { background: #bc8cff22; color: var(--purple); }
+  .mtag.flat { background: #d2992222; color: var(--accent3); }
+  .mtag.short { background: #f778ba22; color: var(--pink); }
+  .mtag.mid { background: #58a6ff22; color: var(--accent); }
+  .mtag.large { background: #3fb95022; color: var(--accent2); }
+  .mtag.meme { background: #f8514922; color: var(--danger); }
+
+  /* Category filter tabs */
+  .cat-tabs { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+  .cat-tab {
+    padding: 5px 12px; border-radius: 6px; border: 1px solid var(--border);
+    background: transparent; color: var(--text-dim); font-size: 12px; cursor: pointer; transition: all 0.2s;
+  }
+  .cat-tab:hover { border-color: var(--accent); color: var(--accent); }
+  .cat-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
+
+  /* Hyperparams */
+  .hp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .hp-item {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px;
+  }
+  .hp-item label { font-size: 11px; margin-bottom: 2px; display: flex; justify-content: space-between; }
+  .hp-item label .hp-hint { font-size: 10px; color: var(--text-dim); font-weight: 400; }
+  .hp-item input, .hp-item select { padding: 5px 8px; font-size: 12px; }
+
+  /* Tags */
+  .tag { display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; margin-left: 4px; }
+  .tag.pytorch { background: #ee4c2c33; color: #ee4c2c; }
+  .tag.sklearn { background: #58a6ff22; color: var(--accent); }
+
+  /* Ticker */
+  .ticker-search { position: relative; }
+  .ticker-search input { padding-left: 10px; }
+  .ticker-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+  .ticker-tag {
+    background: var(--accent); color: var(--bg); padding: 3px 10px; border-radius: 4px;
+    font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 4px;
+  }
+  .ticker-tag .remove { cursor: pointer; opacity: 0.7; font-size: 14px; }
+  .ticker-tag .remove:hover { opacity: 1; }
+
+  /* Feature pills */
+  .feature-section { max-height: 180px; overflow-y: auto; margin-top: 8px; }
+  .feature-pill {
+    display: inline-block; padding: 2px 7px; margin: 2px; border-radius: 4px;
+    font-size: 10px; font-family: monospace; border: 1px solid var(--border);
+    cursor: pointer; transition: all 0.15s;
+  }
+  .feature-pill:hover { border-color: var(--accent); }
+  .feature-pill.active { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+
+  /* Config preview */
+  .config-preview-box {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+    overflow: hidden; margin-top: 12px;
+  }
+  .config-preview-box .preview-title {
+    padding: 8px 14px; border-bottom: 1px solid var(--border); font-size: 12px;
+    font-weight: 600; color: var(--text-dim);
+  }
+  .config-preview-box pre {
+    padding: 14px; font-size: 11px; font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    line-height: 1.6; max-height: 300px; overflow-y: auto; color: var(--text);
+  }
+  .config-preview-box pre .key { color: var(--accent); }
+  .config-preview-box pre .str { color: var(--accent2); }
+  .config-preview-box pre .num { color: var(--accent3); }
+  .config-preview-box pre .cmt { color: var(--text-dim); }
+
+  /* Run button (config page) */
+  .start-btn-wrap { text-align: center; margin-top: 28px; margin-bottom: 20px; }
+  .start-btn {
+    padding: 14px 48px; background: linear-gradient(135deg, var(--accent), #1f6feb);
+    color: #fff; border: none; border-radius: 10px; font-size: 16px; font-weight: 600;
+    cursor: pointer; transition: all 0.2s; letter-spacing: 0.3px;
+    display: inline-flex; align-items: center; gap: 10px;
+  }
+  .start-btn:hover { filter: brightness(1.1); transform: translateY(-1px); box-shadow: 0 4px 20px #58a6ff33; }
+  .start-btn:active { transform: translateY(0); }
+
+  /* ===== EXECUTION PAGE ===== */
+  .exec-page { padding: 24px 32px; max-width: 1100px; margin: 0 auto; }
+  .exec-page h2 { font-size: 20px; font-weight: 600; margin-bottom: 4px; color: var(--text-bright); }
+
+  /* Back button */
+  .back-btn {
+    display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px;
+    background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+    color: var(--text-dim); font-size: 13px; cursor: pointer; transition: all 0.2s;
+    margin-bottom: 16px;
+  }
+  .back-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* Step progress */
+  .steps-container {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 24px; margin-bottom: 20px;
+  }
+  .steps-bar { display: flex; align-items: center; margin-bottom: 20px; }
+  .step-item {
+    display: flex; align-items: center; gap: 8px; flex: 1; position: relative;
+  }
+  .step-item:not(:last-child)::after {
+    content: ''; position: absolute; right: 0; top: 50%; width: calc(100% - 36px);
+    height: 2px; background: var(--border); transform: translate(50%, -50%); z-index: 0;
+  }
+  .step-item:not(:last-child).done::after { background: var(--step-done); }
+  .step-item:not(:last-child).active::after {
+    background: linear-gradient(90deg, var(--step-active), var(--border));
+  }
+  .step-circle {
+    width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 600; background: var(--bg); z-index: 1;
+    transition: all 0.3s; flex-shrink: 0;
+  }
+  .step-item.done .step-circle { background: var(--step-done); border-color: var(--step-done); color: #fff; }
+  .step-item.active .step-circle { background: var(--step-active); border-color: var(--step-active); color: #fff; animation: pulse 1.5s infinite; }
+  .step-item.error .step-circle { background: var(--step-error); border-color: var(--step-error); color: #fff; }
+  .step-label { font-size: 12px; color: var(--text-dim); white-space: nowrap; }
+  .step-item.done .step-label { color: var(--step-done); }
+  .step-item.active .step-label { color: var(--step-active); font-weight: 600; }
+  .step-item.error .step-label { color: var(--step-error); }
+
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(88,166,255,0.4); }
+    50% { box-shadow: 0 0 0 8px rgba(88,166,255,0); }
+  }
+
+  /* Progress bar */
+  .progress-wrap {
+    background: var(--bg); border-radius: 8px; height: 8px; overflow: hidden; margin-bottom: 12px;
+  }
+  .progress-bar {
+    height: 100%; border-radius: 8px; transition: width 0.5s ease;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+  }
+  .progress-bar.error { background: var(--danger); }
+  .progress-text { font-size: 13px; color: var(--text-dim); margin-bottom: 6px; }
+  .progress-text .current-step { color: var(--accent); font-weight: 600; }
+  .progress-text .pct { float: right; font-family: monospace; }
+
+  /* Log panel */
+  .log-panel {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 10px;
+    margin-bottom: 20px; overflow: hidden;
+  }
+  .log-header {
+    padding: 10px 16px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 13px; font-weight: 600; color: var(--text-dim);
+  }
+  .log-body {
+    padding: 14px 16px; max-height: 260px; overflow-y: auto;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace; font-size: 12px; line-height: 1.8;
+  }
+  .log-line { margin-bottom: 2px; }
+  .log-line .time { color: var(--text-dim); margin-right: 8px; }
+  .log-line .msg { color: var(--text); }
+  .log-line.info .msg { color: var(--text); }
+  .log-line.success .msg { color: var(--step-done); }
+  .log-line.warn .msg { color: var(--accent3); }
+  .log-line.error .msg { color: var(--danger); }
+  .log-line.step .msg { color: var(--accent); font-weight: 600; }
+
+  /* Results cards */
+  .results-section { margin-top: 20px; }
+  .results-section h3 { font-size: 16px; font-weight: 600; margin-bottom: 14px; color: var(--text-bright); }
+
+  .summary-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+  .summary-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 16px;
+  }
+  .summary-card .sc-label { font-size: 12px; color: var(--text-dim); margin-bottom: 4px; }
+  .summary-card .sc-value { font-size: 24px; font-weight: 700; }
+  .summary-card .sc-value.positive { color: var(--accent2); }
+  .summary-card .sc-value.negative { color: var(--danger); }
+
+  /* Timeline */
+  .timeline-bar { display: flex; height: 28px; border-radius: 6px; overflow: hidden; margin-bottom: 14px; }
+  .timeline-seg { min-width: 2px; transition: opacity 0.2s; }
+  .timeline-seg:hover { opacity: 0.8; }
+  .timeline-seg.hold { background: var(--accent2); }
+  .timeline-seg.empty { background: var(--border); }
+
+  /* Trade table */
+  .trade-table-wrap {
+    background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+    overflow: hidden;
+  }
+  .trade-table-header {
+    padding: 10px 16px; border-bottom: 1px solid var(--border); font-size: 13px;
+    font-weight: 600; color: var(--text-dim);
+  }
+  .trade-table {
+    width: 100%; border-collapse: collapse; font-size: 12px;
+  }
+  .trade-table th {
+    text-align: left; padding: 8px 12px; border-bottom: 2px solid var(--border);
+    font-size: 11px; color: var(--text-dim); font-weight: 600;
+  }
+  .trade-table td {
+    padding: 8px 12px; border-bottom: 1px solid var(--border);
+    font-family: 'JetBrains Mono', monospace; font-size: 12px;
+  }
+  .trade-table tr:hover { background: var(--hover); }
+  .positive { color: var(--accent2); }
+  .negative { color: var(--danger); }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+  .tab-btn {
+    padding: 8px 16px; font-size: 13px; cursor: pointer; border: none; background: transparent;
+    border-bottom: 2px solid transparent; color: var(--text-dim); transition: all 0.2s;
+  }
+  .tab-btn:hover { color: var(--text); }
+  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+
+  /* Stats grid */
+  .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+
+  /* Model detail panel */
+  .model-detail {
+    background: var(--card2); border: 1px solid var(--border); border-radius: 10px;
+    padding: 16px 20px; margin-top: 12px; display: none;
+  }
+  .model-detail.show { display: block; }
+  .model-detail h4 { font-size: 14px; font-weight: 600; color: var(--text-bright); margin-bottom: 8px; }
+  .model-detail .detail-row { display: flex; gap: 20px; font-size: 12px; margin-bottom: 4px; }
+  .model-detail .detail-label { color: var(--text-dim); min-width: 80px; }
+  .model-detail .detail-value { color: var(--text); }
+
+  .advice-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+  .advice-card {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 14px; font-size: 12px;
+  }
+  .advice-card .advice-title { font-weight: 600; color: var(--accent); margin-bottom: 4px; font-size: 11px; }
+  .advice-card .advice-text { color: var(--text-dim); line-height: 1.5; }
+
+  /* hidden */
+  .hidden { display: none !important; }
+
+  /* ===== SCAN PAGE ===== */
+  .scan-page { padding: 24px 32px; max-width: 1200px; margin: 0 auto; }
+  .scan-page h2 { font-size: 22px; font-weight: 600; margin-bottom: 6px; color: var(--text-bright); }
+  .scan-page .subtitle { color: var(--text-dim); font-size: 14px; margin-bottom: 24px; }
+
+  .scan-config-form {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 20px 24px; margin-bottom: 20px;
+  }
+  .scan-form-row { display: flex; gap: 16px; align-items: end; flex-wrap: wrap; }
+  .scan-form-row .field { flex: 1; min-width: 160px; }
+  .scan-form-row .field label { display: block; font-size: 12px; color: var(--text-dim); margin-bottom: 4px; }
+  .scan-form-row .field select,
+  .scan-form-row .field input {
+    width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--input-bg); color: var(--text); font-size: 14px;
+  }
+
+  .scan-style-btns { display: flex; gap: 8px; }
+  .scan-style-btn {
+    flex: 1; padding: 10px 16px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--card2); color: var(--text-dim); font-size: 13px; cursor: pointer;
+    text-align: center; transition: all 0.2s;
+  }
+  .scan-style-btn:hover { border-color: var(--accent); color: var(--text); }
+  .scan-style-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
+
+  .scan-start-btn {
+    padding: 10px 32px; border-radius: 8px; border: none; font-size: 14px; font-weight: 600;
+    background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #fff;
+    cursor: pointer; transition: transform 0.1s;
+  }
+  .scan-start-btn:hover { transform: translateY(-1px); }
+  .scan-start-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  /* Scan progress */
+  .scan-progress-section { margin-bottom: 20px; }
+  .scan-overall-bar {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 16px 20px; margin-bottom: 16px;
+  }
+  .scan-overall-header { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px; }
+  .scan-overall-header .scan-pct { color: var(--accent); font-weight: 600; }
+  .scan-bar-track {
+    height: 8px; background: var(--bg); border-radius: 4px; overflow: hidden;
+  }
+  .scan-bar-fill {
+    height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 4px; transition: width 0.5s;
+  }
+
+  .scan-model-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 8px; margin-bottom: 16px;
+  }
+  .scan-model-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 12px; font-size: 12px; transition: all 0.3s;
+  }
+  .scan-model-card .smc-name { font-weight: 600; color: var(--text-dim); margin-bottom: 2px; }
+  .scan-model-card .smc-desc { font-size: 10px; color: var(--text-dim); opacity: 0.6; line-height: 1.3; margin-bottom: 4px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .scan-model-card .smc-status { font-size: 11px; color: var(--text-dim); }
+  .scan-model-card.smc-pending { opacity: 0.5; }
+  .scan-model-card.smc-running { border-color: var(--accent); }
+  .scan-model-card.smc-running .smc-name { color: var(--accent); }
+  .scan-model-card.smc-completed { border-color: var(--accent2); }
+  .scan-model-card.smc-completed .smc-name { color: var(--accent2); }
+  .scan-model-card.smc-completed .smc-status { color: var(--accent2); }
+  .scan-model-card.smc-failed { border-color: var(--danger); }
+  .scan-model-card.smc-failed .smc-name { color: var(--danger); }
+  .scan-model-card.smc-failed .smc-status { color: var(--danger); }
+  .scan-model-card.smc-skipped { opacity: 0.4; }
+
+  /* Scan results */
+  .scan-results-section {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 20px 24px; margin-bottom: 20px;
+  }
+  .scan-best-card {
+    background: linear-gradient(135deg, rgba(63,185,80,0.1), rgba(88,166,255,0.1));
+    border: 2px solid var(--accent2); border-radius: 12px; padding: 20px;
+    text-align: center; margin-bottom: 20px;
+  }
+  .scan-best-card .best-label { font-size: 12px; color: var(--accent2); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+  .scan-best-card .best-model { font-size: 28px; font-weight: 700; color: var(--text-bright); }
+  .scan-best-card .best-stats { font-size: 14px; color: var(--text-dim); margin-top: 8px; }
+
+  .scan-rank-table { width: 100%; border-collapse: collapse; }
+  .scan-rank-table th {
+    text-align: left; padding: 8px 12px; font-size: 12px; color: var(--text-dim);
+    border-bottom: 1px solid var(--border); font-weight: 500;
+  }
+  .scan-rank-table td {
+    padding: 8px 12px; font-size: 13px; border-bottom: 1px solid var(--border);
+  }
+  .scan-rank-table tr:first-child td { color: var(--accent2); font-weight: 600; }
+  .scan-rank-table .rank-num { color: var(--text-dim); width: 40px; }
+
+  /* Prediction */
+  .scan-predict-section {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 20px 24px; margin-bottom: 20px;
+  }
+  .predict-signal-card {
+    text-align: center; padding: 20px; border-radius: 12px; margin-bottom: 16px;
+  }
+  .predict-signal-card.signal-buy { background: rgba(63,185,80,0.1); border: 2px solid var(--accent2); }
+  .predict-signal-card.signal-sell { background: rgba(248,81,73,0.1); border: 2px solid var(--danger); }
+  .predict-signal-card.signal-hold { background: rgba(210,153,34,0.1); border: 2px solid var(--accent3); }
+  .predict-signal-card .signal-label { font-size: 12px; color: var(--text-dim); margin-bottom: 4px; }
+  .predict-signal-card .signal-action { font-size: 32px; font-weight: 700; }
+  .predict-signal-card.signal-buy .signal-action { color: var(--accent2); }
+  .predict-signal-card.signal-sell .signal-action { color: var(--danger); }
+  .predict-signal-card.signal-hold .signal-action { color: var(--accent3); }
+  .predict-signal-card .signal-meta { font-size: 13px; color: var(--text-dim); margin-top: 8px; }
+
+  .predict-timeline { max-height: 300px; overflow-y: auto; }
+  .predict-row { display: flex; align-items: center; gap: 12px; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .predict-row .pr-date { color: var(--text-dim); min-width: 90px; }
+  .predict-row .pr-score { min-width: 80px; }
+  .predict-row .pr-signal { padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+  .predict-row .pr-signal.buy { background: rgba(63,185,80,0.15); color: var(--accent2); }
+  .predict-row .pr-signal.sell { background: rgba(248,81,73,0.15); color: var(--danger); }
+  .predict-row .pr-signal.hold { background: rgba(210,153,34,0.15); color: var(--accent3); }
+
+  /* Scan history */
+  .scan-history-section {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 20px 24px;
+  }
+  .scan-history-section h3 { font-size: 15px; font-weight: 600; color: var(--text-bright); margin-bottom: 12px; }
+  .scan-history-list { display: flex; flex-direction: column; gap: 8px; }
+  .scan-history-item {
+    display: flex; align-items: center; gap: 12px; padding: 10px 14px;
+    background: var(--card2); border: 1px solid var(--border); border-radius: 8px;
+    cursor: pointer; transition: border-color 0.2s; font-size: 13px;
+  }
+  .scan-history-item:hover { border-color: var(--accent); }
+  .shi-ticker { font-weight: 600; color: var(--text-bright); min-width: 60px; }
+  .shi-style { color: var(--text-dim); font-size: 12px; min-width: 50px; }
+  .shi-status { padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+  .shi-status.s-running { background: rgba(88,166,255,0.15); color: var(--accent); }
+  .shi-status.s-completed { background: rgba(63,185,80,0.15); color: var(--accent2); }
+  .shi-status.s-failed { background: rgba(248,81,73,0.15); color: var(--danger); }
+  .shi-best { color: var(--text-dim); font-size: 12px; margin-left: auto; }
+  .shi-time { color: var(--text-dim); font-size: 11px; }
+
+  /* ===== MOBILE: TABLET / LARGE PHONE (≤768px) ===== */
+  @media (max-width: 768px) {
+    /* iOS Safari: prevent auto-zoom on input focus (requires ≥16px) */
+    select, input[type="text"], input[type="number"], input[type="date"] {
+      font-size: 16px;
+    }
+    body { -webkit-text-size-adjust: 100%; }
+
+    .header { padding: 12px 16px; }
+    .header .status { display: none; }
+    .page-nav-btn { padding: 6px 10px; font-size: 12px; }
+
+    .config-page, .exec-page, .scan-page { padding: 16px; }
+    .config-section, .scan-config-form, .scan-results-section, .scan-predict-section, .scan-history-section { padding: 16px; }
+
+    .form-row-3 { grid-template-columns: 1fr 1fr; }
+    .form-row-3 > div:nth-child(3) { display: none; } /* hide duration hint column */
+
+    .summary-cards { grid-template-columns: 1fr 1fr; }
+    .advice-grid { grid-template-columns: 1fr; }
+
+    .trade-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .trade-table { min-width: 560px; }
+
+    .step-circle { width: 28px; height: 28px; font-size: 12px; }
+    .step-label { font-size: 11px; }
+
+    .model-detail .detail-row { flex-direction: column; gap: 2px; }
+    .model-detail .detail-label { min-width: unset; }
+
+    /* Model cards: 2 columns on tablet */
+    .model-cards { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .model-card .model-brief { display: none; }
+  }
+
+  /* ===== MOBILE: STANDARD PHONE (≤480px) ===== */
+  @media (max-width: 480px) {
+    .header { padding: 10px 12px; gap: 8px; flex-wrap: wrap; }
+    .header h1 { font-size: 15px; }
+    .header h1 svg { width: 18px; height: 18px; }
+    .page-nav { width: 100%; justify-content: center; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .page-nav-btn { flex: 0 0 auto; text-align: center; padding: 7px 10px; font-size: 12px; white-space: nowrap; }
+
+    .config-page, .exec-page, .scan-page { padding: 12px; }
+    .config-page h2 { font-size: 18px; }
+    .config-section { padding: 14px 12px; border-radius: 10px; overflow: hidden; }
+    .section-header h3 { font-size: 14px; }
+
+    .config-grid { gap: 14px; }
+
+    /* Forms: stack everything */
+    .form-row-3 { grid-template-columns: 1fr; gap: 8px; }
+    .form-row-3 > div:nth-child(3) { display: block; } /* re-show hint on own row */
+    .form-row-inline { grid-template-columns: 1fr; gap: 8px; }
+    .hp-grid { grid-template-columns: 1fr; }
+
+    /* Model cards: fixed 2 columns, no overflow */
+    .model-cards { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .model-card { padding: 8px 10px; }
+    .model-card .model-name { font-size: 12px; }
+    .model-card .model-brief { display: none; }
+    .model-card .model-tags { gap: 3px; }
+    .model-card .mtag { font-size: 8px; padding: 1px 4px; }
+
+    /* Category tabs: horizontal scroll instead of wrap */
+    .cat-tabs { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 4px; }
+    .cat-tab { white-space: nowrap; flex-shrink: 0; }
+
+    /* Steps bar: compact */
+    .steps-bar { flex-wrap: wrap; justify-content: center; gap: 6px; }
+    .step-item { flex: unset; }
+    .step-item:not(:last-child)::after { display: none; }
+    .step-circle { width: 24px; height: 24px; font-size: 11px; }
+    .step-label { display: none; }
+
+    .progress-text { font-size: 12px; }
+    .log-body { font-size: 11px; line-height: 1.7; max-height: 200px; }
+
+    /* Summary & stats */
+    .summary-cards { gap: 8px; }
+    .summary-card { padding: 12px; }
+    .summary-card .sc-value { font-size: 20px; }
+    .stats-grid { grid-template-columns: 1fr; }
+
+    /* Tables */
+    .trade-table { min-width: 520px; }
+    .trade-table th, .trade-table td { padding: 6px 8px; font-size: 11px; }
+
+    /* Timeline */
+    .timeline-bar { height: 22px; }
+
+    /* Tabs */
+    .tab-btn { padding: 8px 12px; font-size: 12px; }
+
+    /* Start button: full width */
+    .start-btn-wrap { margin-top: 20px; }
+    .start-btn { width: 100%; justify-content: center; padding: 14px; font-size: 15px; border-radius: 10px; }
+
+    /* Config preview */
+    .config-preview-box pre { font-size: 10px; line-height: 1.5; max-height: 200px; padding: 10px; }
+
+    /* Hints */
+    .hint-box { padding: 8px 10px; font-size: 11px; }
+
+    /* Feature pills */
+    .feature-pill { font-size: 11px; padding: 3px 8px; }
+    .feature-section { max-height: 140px; }
+
+    /* Back button */
+    .back-btn { padding: 6px 12px; font-size: 12px; }
+
+    /* Exec page title */
+    .exec-page h2 { font-size: 17px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== HEADER ===== -->
+<div class="header">
+  <h1>
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="url(#g1)" stroke-width="2">
+      <defs><linearGradient id="g1" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#58a6ff"/><stop offset="100%" stop-color="#3fb950"/>
+      </linearGradient></defs>
+      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+    </svg>
+    <span class="logo">AlphaScout</span>
+  </h1>
+  <div class="header-right">
+    <div class="page-nav">
+      <button class="page-nav-btn active" id="navConfig" onclick="goToPage('config')">Backtest</button>
+      <button class="page-nav-btn" id="navExec" onclick="goToPage('exec')">Run</button>
+      <button class="page-nav-btn" id="navQuick" onclick="goToPage('quick')" style="background:linear-gradient(135deg,#58a6ff,#3fb950);color:#fff">Quick Predict</button>
+      <button class="page-nav-btn" id="navScan" onclick="goToPage('scan')">Auto Scan</button>
+    </div>
+    <div class="status">
+      <div class="dot"></div>
+      <span>5,000+ Stocks | GPU: RTX PRO 6000</span>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================================ -->
+<!-- ===== PAGE 1: CONFIGURATION ===== -->
+<!-- ================================================================ -->
+<div class="page active" id="pageConfig">
+<div class="config-page">
+  <h2>Backtest Configuration</h2>
+  <p class="subtitle">Select model, stock, strategy and time range, then click the button at the bottom to start backtesting</p>
+
+  <div class="config-grid">
+
+    <!-- ===== 1. Model Selection ===== -->
+    <div class="config-section full-width">
+      <div class="section-header">
+        <div class="section-num">1</div>
+        <h3>Select Model</h3>
+        <span class="section-desc">Click to select a model. Details will appear below.</span>
+      </div>
+
+      <div class="cat-tabs" id="catTabs">
+        <button class="cat-tab active" data-cat="all" onclick="filterCat('all')">All</button>
+        <button class="cat-tab" data-cat="tree" onclick="filterCat('tree')">Tree Models (CPU)</button>
+        <button class="cat-tab" data-cat="rnn" onclick="filterCat('rnn')">Recurrent Neural Networks</button>
+        <button class="cat-tab" data-cat="attention" onclick="filterCat('attention')">Attention / Transformer</button>
+        <button class="cat-tab" data-cat="other" onclick="filterCat('other')">Other Deep Learning</button>
+      </div>
+
+      <div class="model-cards" id="modelCards"></div>
+
+      <!-- Model Detail -->
+      <div class="model-detail" id="modelDetail"></div>
+    </div>
+
+    <!-- ===== 2. Hyperparameters ===== -->
+    <div class="config-section">
+      <div class="section-header">
+        <div class="section-num">2</div>
+        <h3>Hyperparameters</h3>
+      </div>
+      <div id="hpContent">
+        <p style="color:var(--text-dim);font-size:13px">Please select a model above first</p>
+      </div>
+    </div>
+
+    <!-- ===== 3. Feature Set ===== -->
+    <div class="config-section">
+      <div class="section-header">
+        <div class="section-num">3</div>
+        <h3>Feature Set</h3>
+      </div>
+      <div class="form-row">
+        <label>Select Feature Set</label>
+        <select id="featureSet" onchange="onFeatureSetChange()">
+          <option value="Alpha158">Alpha158 — 158 technical factors (recommended for tree models)</option>
+          <option value="Alpha360">Alpha360 — 360 raw price features</option>
+          <option value="Alpha158_20">Alpha158 Top 20 (recommended for GRU/LSTM)</option>
+          <option value="custom">Custom selection...</option>
+        </select>
+      </div>
+      <div class="hint-box">
+        <strong>Alpha158</strong>: Contains 158 classic factors including moving averages, volatility, momentum, and correlations. Recommended for tree models (LightGBM, etc.).<br>
+        <strong>Alpha158 Top 20</strong>: The 20 most return-correlated factors selected from Alpha158. Ideal for sequence models like RNN/GRU (reduces dimensionality for efficiency).<br>
+        <strong>Alpha360</strong>: Uses raw OHLCV data from the past 60 days (6x60=360 dimensions). Suitable for deep learning models that auto-extract features.
+      </div>
+      <div id="featureDetail" class="feature-section" style="display:none"></div>
+      <div id="tsOptions" style="display:none">
+        <div class="form-row" style="margin-top:10px">
+          <label>Sequence Length (step_len)</label>
+          <input type="number" id="stepLen" value="20" min="5" max="60">
+          <div class="hint">Lookback window in days for time-series models. Short-term (5-10), Medium (20-30), Long-term (40-60)</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== 4. Data Source ===== -->
+    <div class="config-section">
+      <div class="section-header">
+        <div class="section-num">4</div>
+        <h3>Data Source</h3>
+      </div>
+      <div class="form-row">
+        <label>Data Source</label>
+        <select id="dataSource">
+          <option value="db">stock_data.db (5,000+ stocks, latest data)</option>
+          <option value="yfinance">yfinance (625 S&P 500, 2000-2026)</option>
+          <option value="baostock">baostock (690 CSI 300, China A-shares)</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label>Candlestick Period</label>
+        <select id="klineInterval">
+          <option value="daily">Daily (1D)</option>
+          <option value="weekly">Weekly (1W)</option>
+          <option value="60min">60-min</option>
+          <option value="30min">30-min</option>
+          <option value="15min">15-min</option>
+        </select>
+      </div>
+      <div class="hint">Daily data is most abundant and stable. Intraday data is only available in stock_data.db (~4 months).</div>
+    </div>
+
+    <!-- ===== 5. Target Stock ===== -->
+    <div class="config-section">
+      <div class="section-header">
+        <div class="section-num">5</div>
+        <h3>Target Stock</h3>
+      </div>
+      <div class="form-row ticker-search">
+        <label>Enter stock ticker (press Enter to confirm)</label>
+        <input type="text" id="tickerInput" placeholder="Enter a stock ticker, e.g. INTC" onkeydown="if(event.key==='Enter')addTicker()">
+      </div>
+      <div class="ticker-tags" id="tickerTags"></div>
+      <div class="form-row" style="margin-top:10px">
+        <label>Training Pool</label>
+        <select id="trainingPool">
+          <option value="target_only" selected>Target stock only (recommended, fast)</option>
+          <option value="all">All stocks in data source (requires training period >= 1 year)</option>
+          <option value="sp500">S&P 500 constituents</option>
+          <option value="volatile">Volatile / meme stocks (15)</option>
+          <option value="same_sector">Same sector as target</option>
+        </select>
+      </div>
+      <div class="hint">
+        The training pool determines which stocks the model learns from. For large-cap stocks, use "S&P 500". For meme/small-cap stocks, use "Volatile / meme stocks" to help the model learn high-volatility patterns.
+      </div>
+    </div>
+
+    <!-- ===== 6. Time Range ===== -->
+    <div class="config-section">
+      <div class="section-header">
+        <div class="section-num">6</div>
+        <h3>Time Range</h3>
+      </div>
+      <div class="form-row-3">
+        <div>
+          <label>Train Start</label>
+          <input type="date" id="trainStart" value="2025-02-05">
+        </div>
+        <div>
+          <label>Train End</label>
+          <input type="date" id="trainEnd" value="2025-10-31">
+        </div>
+        <div style="display:flex;align-items:flex-end">
+          <div class="hint" style="margin:0;padding-bottom:8px">~8 months</div>
+        </div>
+      </div>
+      <div class="form-row-3">
+        <div>
+          <label>Validation Start</label>
+          <input type="date" id="validStart" value="2025-11-01">
+        </div>
+        <div>
+          <label>Validation End</label>
+          <input type="date" id="validEnd" value="2025-12-31">
+        </div>
+        <div style="display:flex;align-items:flex-end">
+          <div class="hint" style="margin:0;padding-bottom:8px">~2 months</div>
+        </div>
+      </div>
+      <div class="form-row-3">
+        <div>
+          <label>Test Start</label>
+          <input type="date" id="testStart" value="2026-01-01">
+        </div>
+        <div>
+          <label>Test End</label>
+          <input type="date" id="testEnd" value="2026-03-11">
+        </div>
+        <div style="display:flex;align-items:flex-end">
+          <div class="hint" style="margin:0;padding-bottom:8px">~2.5 months</div>
+        </div>
+      </div>
+      <div class="hint-box">
+        <strong>Training set</strong>: The model learns patterns from this data. Recommended: 3-12 months.<br>
+        <strong>Validation set</strong>: Used for early stopping (prevents overfitting). Recommended: 1-3 months.<br>
+        <strong>Test set</strong>: Data the model has never seen, used to evaluate real performance.
+      </div>
+    </div>
+
+    <!-- ===== 7. Strategy ===== -->
+    <div class="config-section">
+      <div class="section-header">
+        <div class="section-num">7</div>
+        <h3>Trading Strategy</h3>
+      </div>
+      <div class="form-row">
+        <label>Strategy Type</label>
+        <select id="strategyType" onchange="onStrategyChange()">
+          <option value="topk">TopkDropout — Portfolio selection (requires large stock pool, selects top K)</option>
+          <option value="threshold">Signal Threshold — Single stock timing (recommended for 1-3 stocks)</option>
+        </select>
+      </div>
+      <div id="topkParams">
+        <div class="form-row-inline">
+          <div>
+            <label>Top K (position count)</label>
+            <input type="number" id="topK" value="50">
+          </div>
+          <div>
+            <label>N Drop (daily turnover)</label>
+            <input type="number" id="nDrop" value="5">
+          </div>
+        </div>
+        <div class="hint">Selects from top K predicted stocks daily, rotating N. Suitable for multi-stock portfolios.</div>
+      </div>
+      <div id="thresholdParams" style="display:none">
+        <div class="form-row">
+          <label>Buy Threshold</label>
+          <input type="number" id="buyThreshold" value="0" step="0.01">
+          <div class="hint">When set to <strong>0</strong> (auto mode): the target stock is compared cross-sectionally against all stocks daily and bought when it ranks in the top 50%. This avoids guessing score magnitudes. When set manually, the raw prediction score is compared directly (typical magnitude: +/-0.01~0.03).</div>
+        </div>
+      </div>
+      <div class="form-row" style="margin-top:10px">
+        <label>Initial Capital ($)</label>
+        <input type="number" id="capital" value="100000">
+      </div>
+    </div>
+
+    <!-- ===== 8. Prediction Label ===== -->
+    <div class="config-section">
+      <div class="section-header">
+        <div class="section-num">8</div>
+        <h3>Prediction Label</h3>
+      </div>
+      <div class="form-row">
+        <label>Prediction Target</label>
+        <select id="labelType" onchange="onLabelChange()">
+          <option value="1d">Next-day return (default, for daily trading)</option>
+          <option value="5d">5-day return (for weekly rebalancing)</option>
+          <option value="10d">10-day return (for medium-term holding)</option>
+          <option value="20d">20-day return (for monthly strategy)</option>
+          <option value="custom">Custom expression...</option>
+        </select>
+      </div>
+      <div id="labelExpr" style="display:none; margin-top:8px">
+        <input type="text" id="customLabel" placeholder="Ref($close, -2)/Ref($close, -1) - 1" value="Ref($close, -2)/Ref($close, -1) - 1">
+      </div>
+      <div class="hint" id="labelDesc">Expression: Ref($close, -2)/Ref($close, -1) - 1</div>
+      <div class="hint-box" style="margin-top:10px">
+        The prediction label determines what the model learns to predict. <strong>1d</strong> is for short-term high-frequency trading; <strong>5d-10d</strong> for swing trading; <strong>20d</strong> for monthly rebalancing.
+        Longer labels make the model focus more on trends rather than noise.
+      </div>
+    </div>
+
+    <!-- ===== Config Preview ===== -->
+    <div class="config-section full-width">
+      <div class="section-header">
+        <div class="section-num" style="background:var(--accent2)">P</div>
+        <h3>Config Preview</h3>
+        <span class="section-desc">Auto-generated backtest configuration</span>
+      </div>
+      <div class="config-preview-box">
+        <div class="preview-title">qlib_config.yaml</div>
+        <pre id="configPreview"></pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- START BUTTON -->
+  <div class="start-btn-wrap">
+    <button class="start-btn" onclick="startBacktest()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+      Start Backtest
+    </button>
+  </div>
+</div>
+</div>
+
+<!-- ================================================================ -->
+<!-- ===== PAGE 2: EXECUTION ===== -->
+<!-- ================================================================ -->
+<div class="page" id="pageExec">
+<div class="exec-page">
+
+  <button class="back-btn" onclick="goToPage('config')">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+    Back to Config
+  </button>
+
+  <h2 id="execTitle">Backtest Running</h2>
+  <p style="color:var(--text-dim);font-size:14px;margin-bottom:20px" id="execSubtitle">Running backtest, please wait...</p>
+
+  <!-- Steps -->
+  <div class="steps-container">
+    <div class="steps-bar" id="stepsBar">
+      <div class="step-item" id="step0">
+        <div class="step-circle">1</div>
+        <div class="step-label">Preparing Data</div>
+      </div>
+      <div class="step-item" id="step1">
+        <div class="step-circle">2</div>
+        <div class="step-label">Loading Features</div>
+      </div>
+      <div class="step-item" id="step2">
+        <div class="step-circle">3</div>
+        <div class="step-label">Training Model</div>
+      </div>
+      <div class="step-item" id="step3">
+        <div class="step-circle">4</div>
+        <div class="step-label">Predicting</div>
+      </div>
+      <div class="step-item" id="step4">
+        <div class="step-circle">5</div>
+        <div class="step-label">Backtesting</div>
+      </div>
+      <div class="step-item" id="step5">
+        <div class="step-circle">6</div>
+        <div class="step-label">Generating Report</div>
+      </div>
+    </div>
+
+    <!-- Progress -->
+    <div class="progress-text">
+      <span class="current-step" id="currentStepText">Preparing...</span>
+      <span class="pct" id="pctText">0%</span>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-bar" id="progressBar" style="width:0%"></div>
+    </div>
+  </div>
+
+  <!-- Log -->
+  <div class="log-panel">
+    <div class="log-header">
+      <span>Logs</span>
+      <span style="font-size:11px" id="logCount">0 entries</span>
+    </div>
+    <div class="log-body" id="logBody"></div>
+  </div>
+
+  <!-- Results (hidden until done) -->
+  <div class="results-section hidden" id="resultsSection">
+    <h3>Backtest Results</h3>
+
+    <div class="summary-cards" id="summaryCards">
+      <div class="summary-card">
+        <div class="sc-label">Model Return</div>
+        <div class="sc-value" id="rModelReturn">--</div>
+      </div>
+      <div class="summary-card">
+        <div class="sc-label">Buy & Hold Return</div>
+        <div class="sc-value" id="rBhReturn">--</div>
+      </div>
+      <div class="summary-card">
+        <div class="sc-label">Win Rate</div>
+        <div class="sc-value" id="rWinRate">--</div>
+      </div>
+      <div class="summary-card">
+        <div class="sc-label">Trade Count</div>
+        <div class="sc-value" id="rTotalTrades">--</div>
+      </div>
+    </div>
+
+    <!-- Timeline -->
+    <div style="margin-bottom:16px">
+      <label style="margin-bottom:8px">Position Timeline (green = holding, gray = no position)</label>
+      <div class="timeline-bar" id="timelineBar"></div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchResultTab(this,'tradesPanel')">Trade History</button>
+      <button class="tab-btn" onclick="switchResultTab(this,'segmentsPanel')">Position Segments</button>
+      <button class="tab-btn" onclick="switchResultTab(this,'statsPanel')">Statistics</button>
+    </div>
+
+    <!-- Trades -->
+    <div id="tradesPanel">
+      <div class="trade-table-wrap">
+        <div class="trade-table-header">Trade Details</div>
+        <table class="trade-table">
+          <thead><tr>
+            <th>Ticker</th><th>Buy Date</th><th>Buy Price</th><th>Sell Date</th><th>Sell Price</th><th>Days Held</th><th>Return</th>
+          </tr></thead>
+          <tbody id="tradeTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Segments -->
+    <div id="segmentsPanel" style="display:none">
+      <div class="trade-table-wrap">
+        <div class="trade-table-header">All Holding / Empty Segments</div>
+        <table class="trade-table">
+          <thead><tr>
+            <th>Ticker</th><th>Type</th><th>Start</th><th>End</th><th>Start Price</th><th>End Price</th><th>Days</th><th>Change</th>
+          </tr></thead>
+          <tbody id="segmentTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div id="statsPanel" style="display:none">
+      <div class="stats-grid">
+        <div class="summary-card">
+          <div class="sc-label">Holding Stats</div>
+          <div id="holdingStats" style="font-size:13px; margin-top:8px"></div>
+        </div>
+        <div class="summary-card">
+          <div class="sc-label">Empty Stats</div>
+          <div id="emptyStats" style="font-size:13px; margin-top:8px"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- ================================================================ -->
+<!-- ===== PAGE 3: AUTO SCAN ===== -->
+<!-- ================================================================ -->
+<div class="page" id="pageScan">
+<div class="scan-page">
+
+  <h2>Auto Model Scanner</h2>
+  <p class="subtitle">Enter a stock ticker to automatically test all models, find the best strategy, and predict future actions</p>
+
+  <!-- Scan Config Form -->
+  <div class="scan-config-form" id="scanConfigForm">
+    <div class="scan-form-row">
+      <div class="field">
+        <label>Ticker</label>
+        <input type="text" id="scanTicker" placeholder="e.g. AAPL, MSFT" value="AAPL">
+      </div>
+      <div class="field">
+        <label>Data Source</label>
+        <select id="scanDataSource">
+          <option value="db">Local database (5,000+ stocks)</option>
+          <option value="yfinance">Yahoo Finance</option>
+          <option value="baostock">Baostock (China A-shares)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Trading Style</label>
+        <div class="scan-style-btns">
+          <div class="scan-style-btn active" data-style="ultra_short" onclick="selectScanStyle(this)">Day Trade</div>
+          <div class="scan-style-btn" data-style="swing" onclick="selectScanStyle(this)">Swing</div>
+        </div>
+        <div class="scan-style-hint" id="scanStyleHint" style="font-size:11px;color:var(--text-dim);margin-top:6px;line-height:1.5">
+          Day trade: hold 1-2 days, trained on ~6 months of data
+        </div>
+      </div>
+      <div class="field" style="flex:0 0 auto;">
+        <label>&nbsp;</label>
+        <button class="scan-start-btn" id="scanStartBtn" onclick="startScan()">Start Scan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scan Progress -->
+  <div class="scan-progress-section hidden" id="scanProgressSection">
+    <div class="scan-overall-bar">
+      <div class="scan-overall-header">
+        <span id="scanProgressLabel">Preparing...</span>
+        <span class="scan-pct" id="scanPctText">0%</span>
+      </div>
+      <div class="scan-bar-track">
+        <div class="scan-bar-fill" id="scanBarFill" style="width:0%"></div>
+      </div>
+    </div>
+    <div class="scan-model-grid" id="scanModelGrid"></div>
+    <div class="log-container" style="margin-top:10px">
+      <div class="log-header" style="font-size:12px;color:var(--text-dim);margin-bottom:6px">Scan Logs</div>
+      <div class="log-body" id="scanLogBody" style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px;max-height:200px;overflow-y:auto;font-family:monospace;font-size:11px;line-height:1.7"></div>
+    </div>
+  </div>
+
+  <!-- Scan Results -->
+  <div class="scan-results-section hidden" id="scanResultsSection">
+    <h3 style="font-size:16px;font-weight:600;color:var(--text-bright);margin-bottom:16px">Scan Results</h3>
+    <!-- Training period info -->
+    <div class="scan-info-banner" id="scanInfoBanner" style="display:none;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:14px 18px;margin-bottom:14px;font-size:13px;color:var(--text-dim);line-height:1.7">
+    </div>
+    <div style="display:flex;gap:16px;align-items:stretch;flex-wrap:wrap;margin-bottom:4px">
+      <div class="scan-best-card" id="scanBestCard" style="flex:1;min-width:200px;margin-bottom:0">
+        <div class="best-label">Best Model</div>
+        <div class="best-model" id="scanBestModel">-</div>
+        <div class="best-stats" id="scanBestStats"></div>
+      </div>
+      <div id="alphaScoreCard" style="display:none;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px 28px;text-align:center;min-width:160px">
+        <div style="font-size:11px;color:var(--text-dim);font-weight:600;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">AlphaScore</div>
+        <div id="alphaScoreRing" style="width:72px;height:72px;margin:0 auto;position:relative">
+          <svg viewBox="0 0 100 100" style="width:100%;height:100%;transform:rotate(-90deg)">
+            <circle cx="50" cy="50" r="42" fill="none" stroke="var(--border)" stroke-width="8"/>
+            <circle id="alphaScoreArc" cx="50" cy="50" r="42" fill="none" stroke-width="8" stroke-linecap="round" stroke-dasharray="264" stroke-dashoffset="264" style="transition:stroke-dashoffset .8s ease"/>
+          </svg>
+          <div id="alphaScoreNum" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:900;color:var(--text-bright)">-</div>
+        </div>
+        <div id="alphaScoreLabel" style="font-size:14px;font-weight:700;margin-top:6px">-</div>
+        <div id="alphaScoreReason" style="font-size:11px;color:var(--text-dim);margin-top:2px;line-height:1.4"></div>
+      </div>
+    </div>
+    <!-- Column legend -->
+    <div style="font-size:12px;color:var(--text-dim);line-height:1.8;margin:12px 0 8px;padding:10px 14px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px">
+      <strong style="color:var(--text-secondary)">Metrics Guide: </strong>
+      <b style="color:var(--text-secondary)">Model Return</b> = Cumulative return from model's buy/sell signals during the test period &nbsp;
+      <b style="color:var(--text-secondary)">Buy &amp; Hold</b> = Actual price change during the same period (benchmark) &nbsp;
+      <b style="color:var(--text-secondary)">Excess Return</b> = Model Return − Buy &amp; Hold. Positive = outperformed &nbsp;
+      <b style="color:var(--text-secondary)">Win Rate</b> = Profitable trades / Total trades &nbsp;
+      <b style="color:var(--text-secondary)">Trades</b> = Total buy/sell signals during test period
+      <br><strong style="color:var(--text-secondary)">Ranking: </strong>Sorted by model return (descending), then by win rate. #1 is the best model.
+    </div>
+    <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+      <table class="scan-rank-table" id="scanRankTable">
+        <thead><tr>
+          <th class="rank-num">#</th><th>Model</th><th>Return</th><th>B&amp;H</th><th>Excess</th><th>Win%</th><th>Trades</th><th>Time</th><th>Status</th>
+        </tr></thead>
+        <tbody id="scanRankBody"></tbody>
+      </table>
+    </div>
+    <div style="margin-top:16px;text-align:center">
+      <button class="scan-start-btn" id="scanPredictBtn" onclick="runPrediction()">Predict Future Actions</button>
+    </div>
+  </div>
+
+  <!-- Prediction -->
+  <div class="scan-predict-section hidden" id="scanPredictSection">
+    <h3 style="font-size:16px;font-weight:600;color:var(--text-bright);margin-bottom:4px">AI Prediction</h3>
+    <p style="font-size:12px;color:var(--text-dim);margin-bottom:16px">Recommended actions from the best model based on latest data (not financial advice)</p>
+    <div id="scanPredictCard"></div>
+    <h4 style="font-size:13px;color:var(--text-dim);margin:16px 0 8px">Recent Daily Signals</h4>
+    <div class="predict-timeline" id="scanPredictTimeline"></div>
+  </div>
+
+  <!-- Scan History -->
+  <div class="scan-history-section" id="scanHistorySection">
+    <h3>Scan History</h3>
+    <div class="scan-history-list" id="scanHistoryList">
+      <div style="color:var(--text-dim);font-size:13px;padding:10px 0">No history yet</div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- ================================================================ -->
+<!-- ===== PAGE 4: QUICK PREDICT ===== -->
+<!-- ================================================================ -->
+<div class="page" id="pageQuick">
+<div class="scan-page">
+  <h2 style="display:flex;align-items:center;gap:10px">
+    <span style="font-size:24px">&#9889;</span> Quick Predict
+  </h2>
+  <p class="subtitle">Instant stock prediction using pre-trained AI models — no training wait time</p>
+
+  <div class="scan-config-form" id="quickConfigForm">
+    <div class="scan-form-row">
+      <div class="field">
+        <label>Ticker</label>
+        <input type="text" id="quickTicker" placeholder="e.g. AAPL, MSFT, TSLA" value="AAPL">
+      </div>
+      <div class="field">
+        <label>Trading Style</label>
+        <div class="scan-style-btns">
+          <div class="scan-style-btn active" data-style="ultra_short" onclick="selectQuickStyle(this)">Day Trade</div>
+          <div class="scan-style-btn" data-style="swing" onclick="selectQuickStyle(this)">Swing</div>
+        </div>
+      </div>
+      <div class="field" style="flex:0 0 auto;">
+        <label>&nbsp;</label>
+        <button class="scan-start-btn" id="quickPredictBtn" onclick="runQuickPredict()" style="background:linear-gradient(135deg,#58a6ff,#3fb950)">
+          Predict Now
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Predict Result -->
+  <div class="hidden" id="quickResultSection" style="margin-top:24px">
+    <div class="summary-cards" id="quickSummaryCards">
+      <div class="summary-card" style="flex:1.5">
+        <div class="sc-label">Signal</div>
+        <div class="sc-value" id="qSignal" style="font-size:24px">--</div>
+      </div>
+      <div class="summary-card">
+        <div class="sc-label">Latest Score</div>
+        <div class="sc-value" id="qScore">--</div>
+      </div>
+      <div class="summary-card">
+        <div class="sc-label">Threshold</div>
+        <div class="sc-value" id="qThreshold">--</div>
+      </div>
+      <div class="summary-card">
+        <div class="sc-label">Model Used</div>
+        <div class="sc-value" id="qModel" style="font-size:14px">--</div>
+      </div>
+    </div>
+
+    <div style="margin-top:16px">
+      <div class="trade-table-wrap">
+        <div class="trade-table-header">Recent Prediction Signals (last 60 days)</div>
+        <table class="trade-table">
+          <thead><tr>
+            <th>Date</th><th>Score</th><th>Signal</th>
+          </tr></thead>
+          <tbody id="quickSignalTable"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div style="margin-top:12px;text-align:center;">
+      <span id="qCacheInfo" style="font-size:11px;color:var(--text-dim)"></span>
+    </div>
+
+    <div style="margin-top:16px;text-align:center">
+      <button class="scan-start-btn" onclick="goToPage('scan')" style="background:var(--card2);border:1px solid var(--border);">
+        Want deeper analysis? Run Full Scan
+      </button>
+    </div>
+  </div>
+
+  <!-- Error message -->
+  <div class="hidden" id="quickErrorSection" style="margin-top:24px;padding:16px;background:rgba(248,81,73,0.1);border:1px solid var(--danger);border-radius:8px">
+    <div style="color:var(--danger);font-weight:600;margin-bottom:8px">Prediction Not Available</div>
+    <div id="quickErrorMsg" style="font-size:13px;color:var(--text-dim)"></div>
+    <div style="margin-top:12px;font-size:12px;color:var(--text-dim)">
+      Pre-trained models must be initialized first. Contact the administrator or try Auto Scan instead.
+    </div>
+  </div>
+
+</div>
+</div>
+
+<script>
+// ===== MODEL DATABASE =====
+const MODELS = {
+  LGBModel: {
+    name: 'LGBModel', fullName: 'LightGBM', cat: 'tree',
+    brief: 'Fast gradient boosting tree, most commonly used',
+    desc: 'LightGBM is Microsoft\'s gradient boosted decision tree framework. Extremely fast training, no GPU needed, the most mature baseline model in Qlib.',
+    scene: 'General purpose. Best for stable large-cap stocks and index components.',
+    period: 'Short-medium term (daily, weekly)',
+    stockType: 'Large-cap, blue-chip',
+    tags: [['CPU','cpu'],['Tabular','flat']],
+    module: 'qlib.contrib.model.gbdt', dataType: 'flat',
+    params: [
+      { key: 'learning_rate', default: 0.0421, step: 0.001, hint: 'Smaller = slower but finer learning' },
+      { key: 'max_depth', default: 8, step: 1, hint: 'Max tree depth. Larger = more overfitting risk' },
+      { key: 'num_leaves', default: 210, step: 1, hint: 'Number of leaves. More = more complex model' },
+      { key: 'lambda_l1', default: 205.7, step: 0.1, hint: 'L1 regularization. Larger = more conservative' },
+      { key: 'lambda_l2', default: 580.98, step: 0.1, hint: 'L2 regularization. Prevents overfitting' },
+      { key: 'subsample', default: 0.88, step: 0.01, hint: 'Data sampling ratio per tree' },
+    ]
+  },
+  XGBModel: {
+    name: 'XGBModel', fullName: 'XGBoost', cat: 'tree',
+    brief: 'Classic gradient boosting, comprehensive features',
+    desc: 'XGBoost is the most widely used gradient boosting framework. Slightly slower than LightGBM but more flexible tuning.',
+    scene: 'Similar to LightGBM, good for structured data with thorough feature engineering.',
+    period: 'Short-medium term', stockType: 'Large-cap, blue-chip',
+    tags: [['CPU','cpu'],['Tabular','flat']],
+    module: 'qlib.contrib.model.xgboost', dataType: 'flat',
+    params: [
+      { key: 'eta', default: 0.1, step: 0.01, hint: 'Learning rate' },
+      { key: 'max_depth', default: 6, step: 1, hint: 'Tree depth' },
+      { key: 'subsample', default: 0.8, step: 0.05, hint: 'Data sampling ratio' },
+      { key: 'colsample_bytree', default: 0.8, step: 0.05, hint: 'Feature sampling ratio' },
+      { key: 'lambda', default: 1.0, step: 0.1, hint: 'L2 regularization' },
+    ]
+  },
+  CatBoostModel: {
+    name: 'CatBoostModel', fullName: 'CatBoost', cat: 'tree',
+    brief: 'Strong with categorical features, anti-overfitting',
+    desc: 'CatBoost by Yandex excels at handling categorical features with built-in regularization to prevent overfitting.',
+    scene: 'Scenarios with categorical features (industry, sector), or when training data is limited.',
+    period: 'Short-medium term', stockType: 'General',
+    tags: [['CPU','cpu'],['Tabular','flat']],
+    module: 'qlib.contrib.model.catboost_model', dataType: 'flat',
+    params: [
+      { key: 'learning_rate', default: 0.03, step: 0.001, hint: 'Learning rate' },
+      { key: 'depth', default: 6, step: 1, hint: 'Tree depth' },
+      { key: 'iterations', default: 1000, step: 100, hint: 'Number of iterations' },
+      { key: 'l2_leaf_reg', default: 3.0, step: 0.1, hint: 'L2 regularization coefficient' },
+    ]
+  },
+  LinearModel: {
+    name: 'LinearModel', fullName: 'Linear Model', cat: 'tree',
+    brief: 'Simplest baseline, fastest',
+    desc: 'Linear regression model including OLS, Ridge, and Lasso. Use as a baseline — if deep models can\'t beat it, the data may have issues.',
+    scene: 'Quick validation and baseline comparison. If linear works well, your feature engineering is solid.',
+    period: 'General', stockType: 'General',
+    tags: [['CPU','cpu'],['Tabular','flat']],
+    module: 'qlib.contrib.model.linear', dataType: 'flat',
+    params: [
+      { key: 'estimator', default: 'ols', type: 'select', options: ['ols','ridge','lasso'], hint: 'ols=Ordinary Least Squares, ridge=L2 reg, lasso=L1 reg' },
+    ]
+  },
+  DEnsembleModel: {
+    name: 'DEnsembleModel', fullName: 'Double Ensemble', cat: 'tree',
+    brief: 'Dual ensemble, focuses on hard samples',
+    desc: 'Double ensemble model that focuses on hard-to-predict samples and important features simultaneously. More robust than single tree models.',
+    scene: 'Noisy data and volatile markets. More stable than single models.',
+    period: 'Medium-term', stockType: 'General',
+    tags: [['CPU','cpu'],['Tabular','flat']],
+    module: 'qlib.contrib.model.double_ensemble', dataType: 'flat',
+    params: [
+      { key: 'num_models', default: 6, step: 1, hint: 'Number of sub-models in ensemble' },
+      { key: 'epochs', default: 100, step: 10, hint: 'Training epochs' },
+    ]
+  },
+
+  // ===== RNN =====
+  GRU_ts: {
+    name: 'GRU_ts', fullName: 'GRU (Time Series)', cat: 'rnn',
+    brief: 'Lightweight RNN, fast training, good for volatile stocks',
+    desc: 'GRU (Gated Recurrent Unit) is a simplified LSTM with fewer parameters and faster training. Time-series version uses sliding window input.',
+    scene: 'Small/mid-cap and volatile stocks. GRU is less prone to overfitting on small datasets than LSTM.',
+    period: 'Short-term (daily)', stockType: 'Small/mid-cap, meme stocks, volatile',
+    tags: [['GPU','gpu'],['Time Series','ts'],['Short-term','short'],['Meme Stock','meme']],
+    module: 'qlib.contrib.model.pytorch_gru_ts', dataType: 'ts',
+    params: null
+  },
+  GRU_flat: {
+    name: 'GRU_flat', fullName: 'GRU (Cross-section)', cat: 'rnn',
+    brief: 'GRU cross-sectional, uses current-day features',
+    desc: 'Cross-sectional version of GRU. Only uses current-day feature vectors without historical sliding window. Faster training but may lose temporal info.',
+    scene: 'Quick experiments, or when features already capture temporal information.',
+    period: 'Short-term', stockType: 'General',
+    tags: [['GPU','gpu'],['Cross-section','flat']],
+    module: 'qlib.contrib.model.pytorch_gru', dataType: 'flat',
+    params: null
+  },
+  LSTM_ts: {
+    name: 'LSTM_ts', fullName: 'LSTM (Time Series)', cat: 'rnn',
+    brief: 'Classic RNN, strong long-term memory',
+    desc: 'LSTM (Long Short-Term Memory) has an extra forget gate compared to GRU, theoretically better at capturing long-term dependencies. Needs more data.',
+    scene: 'Works well with sufficient data (>1 year). Good for trending assets (large-cap ETFs, indices).',
+    period: 'Medium-term (weekly or multi-day holding)', stockType: 'Large-cap, trending stocks',
+    tags: [['GPU','gpu'],['Time Series','ts'],['Medium-term','mid']],
+    module: 'qlib.contrib.model.pytorch_lstm_ts', dataType: 'ts',
+    params: null
+  },
+  LSTM_flat: {
+    name: 'LSTM_flat', fullName: 'LSTM (Cross-section)', cat: 'rnn',
+    brief: 'LSTM cross-sectional version',
+    desc: 'Cross-sectional LSTM without sliding window.',
+    scene: 'Same as GRU_flat, for quick experiments.',
+    period: 'Short-medium term', stockType: 'General',
+    tags: [['GPU','gpu'],['Cross-section','flat']],
+    module: 'qlib.contrib.model.pytorch_lstm', dataType: 'flat',
+    params: null
+  },
+  ALSTM_ts: {
+    name: 'ALSTM_ts', fullName: 'ALSTM (Attention LSTM)', cat: 'rnn',
+    brief: 'LSTM with attention, focuses on key moments',
+    desc: 'ALSTM adds attention mechanism to LSTM, automatically focusing on the most important time steps. Usually outperforms plain LSTM.',
+    scene: 'Improved LSTM when data is sufficient. Good for event-driven stocks (earnings, news-sensitive).',
+    period: 'Medium-term', stockType: 'Event-driven stocks',
+    tags: [['GPU','gpu'],['Time Series','ts'],['Medium-term','mid']],
+    module: 'qlib.contrib.model.pytorch_alstm_ts', dataType: 'ts',
+    params: null
+  },
+  ALSTM_flat: {
+    name: 'ALSTM_flat', fullName: 'ALSTM (Cross-section)', cat: 'rnn',
+    brief: 'Attention LSTM cross-sectional version',
+    desc: 'Cross-sectional version of ALSTM.',
+    scene: 'Quick experiments.',
+    period: 'Short-medium term', stockType: 'General',
+    tags: [['GPU','gpu'],['Cross-section','flat']],
+    module: 'qlib.contrib.model.pytorch_alstm', dataType: 'flat',
+    params: null
+  },
+  ADARNN: {
+    name: 'ADARNN', fullName: 'AdaRNN (Adaptive RNN)', cat: 'rnn',
+    brief: 'Adapts to different market regimes',
+    desc: 'AdaRNN adaptively adjusts hidden state distributions to handle distribution shift in time series (market regime changes).',
+    scene: 'Frequent market regime shifts (e.g., bull-to-bear transitions, sector rotation).',
+    period: 'Medium-term', stockType: 'General',
+    tags: [['GPU','gpu'],['Cross-section','flat'],['Medium-term','mid']],
+    module: 'qlib.contrib.model.pytorch_adarnn', dataType: 'flat',
+    params: null
+  },
+
+  // ===== Attention =====
+  Transformer_ts: {
+    name: 'Transformer_ts', fullName: 'Transformer (Time Series)', cat: 'attention',
+    brief: 'Self-attention mechanism, fast parallel computation',
+    desc: 'Transformer replaces recurrence with self-attention, enabling parallel sequence processing. Can model more complex temporal relationships.',
+    scene: 'Works well with large datasets (>2 years daily). Prone to overfitting on small data.',
+    period: 'Medium-term', stockType: 'Large-cap, indices',
+    tags: [['GPU','gpu'],['Time Series','ts'],['Large Cap','large']],
+    module: 'qlib.contrib.model.pytorch_transformer_ts', dataType: 'ts',
+    params: null
+  },
+  Transformer_flat: {
+    name: 'Transformer_flat', fullName: 'Transformer (Cross-section)', cat: 'attention',
+    brief: 'Transformer cross-sectional version',
+    desc: 'Cross-sectional version of Transformer.',
+    scene: 'Quick experiments.',
+    period: 'Short-medium term', stockType: 'General',
+    tags: [['GPU','gpu'],['Cross-section','flat']],
+    module: 'qlib.contrib.model.pytorch_transformer', dataType: 'flat',
+    params: null
+  },
+  LocalFormer_ts: {
+    name: 'LocalFormer_ts', fullName: 'LocalFormer', cat: 'attention',
+    brief: 'Local attention, focuses on recent data',
+    desc: 'LocalFormer combines local convolution with global attention, capturing both recent patterns and long-term trends.',
+    scene: 'Combined short-medium term strategies. More sensitive to recent data.',
+    period: 'Short-medium term', stockType: 'General',
+    tags: [['GPU','gpu'],['Time Series','ts'],['Short-term','short']],
+    module: 'qlib.contrib.model.pytorch_localformer_ts', dataType: 'ts',
+    params: null
+  },
+  GATs_ts: {
+    name: 'GATs_ts', fullName: 'GATs (Graph Attention)', cat: 'attention',
+    brief: 'Graph network models stock relationships',
+    desc: 'Graph Attention Networks (GATs) model inter-stock relationships (e.g., same industry, supply chain) through graph structure information propagation.',
+    scene: 'Multi-stock portfolio strategies. Leverages industry linkage and sector rotation.',
+    period: 'Medium-term', stockType: 'Portfolio/multi-stock',
+    tags: [['GPU','gpu'],['Time Series','ts'],['Large Cap','large']],
+    module: 'qlib.contrib.model.pytorch_gats_ts', dataType: 'ts',
+    params: null
+  },
+  GATs_flat: {
+    name: 'GATs_flat', fullName: 'GATs (Cross-section)', cat: 'attention',
+    brief: 'Graph attention cross-sectional version',
+    desc: 'Cross-sectional version of GATs.',
+    scene: 'Quick experiments for portfolio strategies.',
+    period: 'Short-medium term', stockType: 'Portfolio/multi-stock',
+    tags: [['GPU','gpu'],['Cross-section','flat']],
+    module: 'qlib.contrib.model.pytorch_gats', dataType: 'flat',
+    params: null
+  },
+  TRAModel: {
+    name: 'TRAModel', fullName: 'TRA (Temporal Routing)', cat: 'attention',
+    brief: 'Multi-path selection, adapts to market changes',
+    desc: 'TRA (Temporal Routing Adaptor) maintains multiple prediction heads and dynamically selects the best prediction path based on market conditions.',
+    scene: 'Performs well when market conditions change significantly (adaptive strategy switching).',
+    period: 'Medium-term', stockType: 'General',
+    tags: [['GPU','gpu'],['Time Series','ts'],['Medium-term','mid']],
+    module: 'qlib.contrib.model.pytorch_tra', dataType: 'ts',
+    params: null
+  },
+
+  // ===== Other =====
+  TCN_ts: {
+    name: 'TCN_ts', fullName: 'TCN (Temporal CNN)', cat: 'other',
+    brief: 'Causal convolution, high computational efficiency',
+    desc: 'Temporal Convolutional Network (TCN) uses causal dilated convolutions for sequences. Faster training than RNN with parallelism.',
+    scene: 'When compute is limited but you want deep learning. Fast, with performance close to RNN.',
+    period: 'Short-term', stockType: 'General',
+    tags: [['GPU','gpu'],['Time Series','ts'],['Short-term','short']],
+    module: 'qlib.contrib.model.pytorch_tcn_ts', dataType: 'ts',
+    params: null
+  },
+  TCN_flat: {
+    name: 'TCN_flat', fullName: 'TCN (Cross-section)', cat: 'other',
+    brief: 'TCN cross-sectional version',
+    desc: 'Cross-sectional version of TCN.',
+    scene: 'Quick experiments.',
+    period: 'Short-term', stockType: 'General',
+    tags: [['GPU','gpu'],['Cross-section','flat']],
+    module: 'qlib.contrib.model.pytorch_tcn', dataType: 'flat',
+    params: null
+  },
+  TabnetModel: {
+    name: 'TabnetModel', fullName: 'TabNet', cat: 'other',
+    brief: 'Attention-based feature selection, interpretable',
+    desc: 'TabNet uses attention to automatically select features, combining deep learning performance with tree model interpretability.',
+    scene: 'When you want to know which factors the model focuses on. High interpretability needs.',
+    period: 'Medium-term', stockType: 'General',
+    tags: [['GPU','gpu'],['Cross-section','flat'],['Medium-term','mid']],
+    module: 'qlib.contrib.model.pytorch_tabnet', dataType: 'flat',
+    params: null
+  },
+  HIST: {
+    name: 'HIST', fullName: 'HIST (Hierarchical Info)', cat: 'other',
+    brief: 'Leverages shared and unique information',
+    desc: 'HIST decomposes stock features into "concept-shared" (e.g., same industry) and "stock-specific" components, modeling each separately.',
+    scene: 'Multi-stock portfolios. Leverages industry information for better predictions.',
+    period: 'Medium-term', stockType: 'Portfolio/multi-stock',
+    tags: [['GPU','gpu'],['Cross-section','flat'],['Large Cap','large']],
+    module: 'qlib.contrib.model.pytorch_hist', dataType: 'flat',
+    params: null
+  },
+  SFM: {
+    name: 'SFM', fullName: 'SFM (Frequency Decomp)', cat: 'other',
+    brief: 'Frequency domain analysis captures multi-cycle patterns',
+    desc: 'SFM (State Frequency Memory) decomposes time series in the frequency domain, capturing multiple periodic patterns simultaneously.',
+    scene: 'Stocks with clear cyclical patterns (e.g., seasonal industries).',
+    period: 'Medium-long term', stockType: 'Cyclical stocks',
+    tags: [['GPU','gpu'],['Cross-section','flat'],['Medium-term','mid']],
+    module: 'qlib.contrib.model.pytorch_sfm', dataType: 'flat',
+    params: null
+  },
+  DNNModelPytorch: {
+    name: 'DNNModelPytorch', fullName: 'DNN (Deep Neural Net)', cat: 'other',
+    brief: 'Fully connected network, simple and direct',
+    desc: 'Standard multi-layer fully connected neural network. Serves as a deep learning baseline.',
+    scene: 'Deep learning baseline comparison, verifying if complex models truly improve performance.',
+    period: 'General', stockType: 'General',
+    tags: [['GPU','gpu'],['Cross-section','flat']],
+    module: 'qlib.contrib.model.pytorch_nn', dataType: 'flat',
+    params: null
+  },
+};
+
+// Common PyTorch hyperparams
+const PYTORCH_PARAMS = [
+  { key: 'd_feat', default: 20, step: 1, hint: 'Input feature dimension (matches feature set)' },
+  { key: 'hidden_size', default: 128, step: 16, hint: 'Hidden layer size. Larger = more powerful but slower' },
+  { key: 'num_layers', default: 2, step: 1, hint: 'Number of layers. 2-3 is usually sufficient' },
+  { key: 'dropout', default: 0.3, step: 0.05, hint: 'Dropout ratio. Higher = more regularization' },
+  { key: 'n_epochs', default: 200, step: 10, hint: 'Max training epochs' },
+  { key: 'lr', default: 0.0005, step: 0.0001, hint: 'Learning rate. Too high = oscillation, too low = slow convergence' },
+  { key: 'early_stop', default: 20, step: 5, hint: 'Early stop after N epochs without improvement' },
+  { key: 'batch_size', default: 64, step: 16, hint: 'Batch size. Increase if GPU memory allows' },
+];
+
+const TOP20_FEATURES = [
+  "RESI5","WVMA5","RSQR5","KLEN","RSQR10","CORR5","CORD5","CORR10",
+  "ROC60","RESI10","VSTD5","RSQR60","CORR60","WVMA60","STD5",
+  "RSQR20","CORD60","CORD10","CORR20","KLOW"
+];
+
+const LABEL_EXPRS = {
+  '1d': 'Ref($close, -2)/Ref($close, -1) - 1',
+  '5d': 'Ref($close, -6)/Ref($close, -1) - 1',
+  '10d': 'Ref($close, -11)/Ref($close, -1) - 1',
+  '20d': 'Ref($close, -21)/Ref($close, -1) - 1',
+};
+
+let selectedModel = null;
+let currentCat = 'all';
+
+// ===== PAGE NAVIGATION =====
+function goToPage(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.page-nav-btn').forEach(b => b.classList.remove('active'));
+  if (page === 'config') {
+    document.getElementById('pageConfig').classList.add('active');
+    document.getElementById('navConfig').classList.add('active');
+  } else if (page === 'scan') {
+    document.getElementById('pageScan').classList.add('active');
+    document.getElementById('navScan').classList.add('active');
+  } else if (page === 'quick') {
+    document.getElementById('pageQuick').classList.add('active');
+    document.getElementById('navQuick').classList.add('active');
+  } else {
+    document.getElementById('pageExec').classList.add('active');
+    document.getElementById('navExec').classList.add('active');
+  }
+  window.scrollTo(0, 0);
+}
+
+// ===== MODEL CARDS =====
+function renderModelCards() {
+  const container = document.getElementById('modelCards');
+  container.innerHTML = '';
+  Object.values(MODELS).forEach(m => {
+    if (currentCat !== 'all' && m.cat !== currentCat) return;
+    const avail = modelAvailability[m.name];
+    const isUnavailable = avail && !avail.available;
+    const card = document.createElement('div');
+    card.className = 'model-card' + (selectedModel === m.name ? ' selected' : '') + (isUnavailable ? ' unavailable' : '');
+    card.dataset.model = m.name;
+    card.onclick = () => { if (!isUnavailable) selectModel(m.name); };
+    const badge = isUnavailable ? `<div class="unavail-badge">${avail.reason}</div>` : '';
+    card.innerHTML = `
+      <div class="model-name">${m.fullName}</div>
+      <div class="model-brief">${m.brief}</div>
+      <div class="model-tags">${m.tags.map(([t,c]) => `<span class="mtag ${c}">${t}</span>`).join('')}</div>
+      ${badge}
+    `;
+    container.appendChild(card);
+  });
+}
+
+function filterCat(cat) {
+  currentCat = cat;
+  document.querySelectorAll('.cat-tab').forEach(t => t.classList.remove('active'));
+  document.querySelector(`.cat-tab[data-cat="${cat}"]`).classList.add('active');
+  renderModelCards();
+}
+
+function selectModel(name) {
+  selectedModel = name;
+  // Highlight card
+  document.querySelectorAll('.model-card').forEach(c => c.classList.remove('selected'));
+  const card = document.querySelector(`.model-card[data-model="${name}"]`);
+  if (card) card.classList.add('selected');
+
+  const m = MODELS[name];
+  // Show detail panel
+  const detail = document.getElementById('modelDetail');
+  detail.className = 'model-detail show';
+  detail.innerHTML = `
+    <h4>${m.fullName} — Model Details</h4>
+    <p style="font-size:13px;color:var(--text);margin-bottom:12px">${m.desc}</p>
+    <div class="advice-grid">
+      <div class="advice-card">
+        <div class="advice-title">Use Cases</div>
+        <div class="advice-text">${m.scene}</div>
+      </div>
+      <div class="advice-card">
+        <div class="advice-title">Best For</div>
+        <div class="advice-text">${m.period}</div>
+      </div>
+      <div class="advice-card">
+        <div class="advice-title">Stock Types</div>
+        <div class="advice-text">${m.stockType}</div>
+      </div>
+      <div class="advice-card">
+        <div class="advice-title">Data Format</div>
+        <div class="advice-text">${m.dataType === 'ts' ? 'TSDatasetH (time-series sliding window)' : 'DatasetH (cross-sectional feature vector)'}</div>
+      </div>
+    </div>
+  `;
+
+  // Render hyperparams
+  renderHyperparams(name);
+
+  // Show/hide TS options
+  document.getElementById('tsOptions').style.display = m.dataType === 'ts' ? 'block' : 'none';
+
+  updateConfigPreview();
+}
+
+function renderHyperparams(name) {
+  const m = MODELS[name];
+  const container = document.getElementById('hpContent');
+  const params = m.params || PYTORCH_PARAMS;
+
+  let html = '<div class="hp-grid">';
+  params.forEach(p => {
+    if (p.type === 'select') {
+      html += `<div class="hp-item">
+        <label>${p.key} <span class="hp-hint">${p.hint || ''}</span></label>
+        <select id="hp_${p.key}" onchange="updateConfigPreview()">
+          ${p.options.map(o => `<option value="${o}" ${o===p.default?'selected':''}>${o}</option>`).join('')}
+        </select>
+      </div>`;
+    } else {
+      html += `<div class="hp-item">
+        <label>${p.key} <span class="hp-hint">${p.hint || ''}</span></label>
+        <input type="number" step="${p.step||1}" value="${p.default}" id="hp_${p.key}" onchange="updateConfigPreview()">
+      </div>`;
+    }
+  });
+  html += '</div>';
+
+  if (!m.params) {
+    html += `<div class="hint-box" style="margin-top:10px">
+      <strong>hidden_size</strong>: Hidden layer size. Use 64-128 for small data, 256-512 for large data.<br>
+      <strong>num_layers</strong>: More layers capture more complex patterns but risk overfitting. Usually 2-3.<br>
+      <strong>dropout</strong>: Use 0.3-0.5 for small data (strong regularization), 0.1-0.2 for large data.<br>
+      <strong>lr</strong>: Learning rate. Reduce if loss oscillates, increase if loss stagnates.<br>
+      <strong>early_stop</strong>: Stop after N epochs without validation improvement. Higher = longer training but may find better optima.
+    </div>`;
+  }
+
+  container.innerHTML = html;
+}
+
+// ===== FEATURES =====
+function onFeatureSetChange() {
+  const v = document.getElementById('featureSet').value;
+  document.getElementById('featureDetail').style.display = v === 'custom' ? 'block' : 'none';
+  if (v === 'custom') renderFeaturePills();
+  updateConfigPreview();
+}
+
+function renderFeaturePills() {
+  const allFeatures = [
+    "KMID","KLEN","KMID2","KUP","KUP2","KLOW","KLOW2","KSFT","KSFT2",
+    "OPEN0","HIGH0","LOW0","VWAP0",
+    ...["ROC","MA","STD","BETA","RSQR","RESI","MAX","MIN","QTLU","QTLD","RANK","RSV",
+       "IMAX","IMIN","IMXD","CORR","CORD","CNTP","CNTN","CNTD",
+       "SUMP","SUMN","SUMD","VMA","VSTD","WVMA","VSUMP","VSUMN","VSUMD"].flatMap(
+      f => [5,10,20,30,60].map(w => f+w)
+    )
+  ];
+  const container = document.getElementById('featureDetail');
+  container.innerHTML = allFeatures.map(f =>
+    `<span class="feature-pill ${TOP20_FEATURES.includes(f)?'active':''}" onclick="this.classList.toggle('active');updateConfigPreview()">${f}</span>`
+  ).join('');
+}
+
+// ===== STRATEGY =====
+function onStrategyChange() {
+  const v = document.getElementById('strategyType').value;
+  document.getElementById('topkParams').style.display = v === 'topk' ? 'block' : 'none';
+  document.getElementById('thresholdParams').style.display = v === 'threshold' ? 'block' : 'none';
+  updateConfigPreview();
+}
+
+// ===== LABEL =====
+function onLabelChange() {
+  const v = document.getElementById('labelType').value;
+  document.getElementById('labelExpr').style.display = v === 'custom' ? 'block' : 'none';
+  document.getElementById('labelDesc').textContent = 'Expression: ' + (LABEL_EXPRS[v] || 'Custom');
+  updateConfigPreview();
+}
+
+// ===== TICKER =====
+function addTicker() {
+  const input = document.getElementById('tickerInput');
+  const ticker = input.value.trim().toUpperCase();
+  if (!ticker) return;
+  const container = document.getElementById('tickerTags');
+  // Single stock only: replace existing ticker
+  container.innerHTML = '';
+  const tag = document.createElement('div');
+  tag.className = 'ticker-tag';
+  tag.innerHTML = `${ticker} <span class="remove" onclick="removeTicker(this)">&times;</span>`;
+  container.appendChild(tag);
+  input.value = '';
+  autoSelectStrategy();
+  updateConfigPreview();
+}
+function removeTicker(el) { el.parentElement.remove(); autoSelectStrategy(); updateConfigPreview(); }
+
+function autoSelectStrategy() {
+  const count = document.querySelectorAll('.ticker-tag').length;
+  const sel = document.getElementById('strategyType');
+  if (count >= 1 && count <= 3 && sel.value === 'topk') {
+    sel.value = 'threshold';
+    onStrategyChange();
+  }
+}
+
+// ===== CONFIG PREVIEW =====
+function updateConfigPreview() {
+  if (!selectedModel) {
+    document.getElementById('configPreview').innerHTML = '<span class="cmt"># Please select a model first</span>';
+    return;
+  }
+  const m = MODELS[selectedModel];
+  const featureSet = document.getElementById('featureSet').value;
+  const strategy = document.getElementById('strategyType').value;
+  const labelType = document.getElementById('labelType').value;
+  const dataSource = document.getElementById('dataSource').value;
+  const kline = document.getElementById('klineInterval').value;
+  const tickers = [...document.querySelectorAll('.ticker-tag')].map(t => t.textContent.replace('×','').trim());
+  const params = m.params || PYTORCH_PARAMS;
+
+  let c = '';
+  c += `<span class="cmt"># Qlib Backtest Config - Auto-generated</span>\n\n`;
+  c += `<span class="key">data_source</span>: <span class="str">"${dataSource}"</span>\n`;
+  c += `<span class="key">kline</span>: <span class="str">"${kline}"</span>\n`;
+  c += `<span class="key">target</span>: [${tickers.map(t=>`<span class="str">"${t}"</span>`).join(', ')}]\n\n`;
+
+  c += `<span class="key">model</span>:\n`;
+  c += `  <span class="key">class</span>: <span class="str">"${m.name.replace(/_flat|_ts/,'')}"</span>\n`;
+  c += `  <span class="key">module_path</span>: <span class="str">"${m.module}"</span>\n`;
+  c += `  <span class="key">kwargs</span>:\n`;
+  params.forEach(p => {
+    const el = document.getElementById(`hp_${p.key}`);
+    const val = el ? el.value : p.default;
+    if (p.type === 'select') {
+      c += `    <span class="key">${p.key}</span>: <span class="str">"${val}"</span>\n`;
+    } else {
+      c += `    <span class="key">${p.key}</span>: <span class="num">${val}</span>\n`;
+    }
+  });
+  if (m.module.includes('pytorch')) {
+    c += `    <span class="key">GPU</span>: <span class="num">0</span>\n`;
+  }
+
+  c += `\n<span class="key">dataset</span>:\n`;
+  c += `  <span class="key">class</span>: <span class="str">"${m.dataType === 'ts' ? 'TSDatasetH' : 'DatasetH'}"</span>\n`;
+  c += `  <span class="key">handler</span>: <span class="str">"${featureSet.replace('_20','')}"</span>\n`;
+  if (m.dataType === 'ts') {
+    c += `  <span class="key">step_len</span>: <span class="num">${document.getElementById('stepLen').value}</span>\n`;
+  }
+  c += `  <span class="key">segments</span>:\n`;
+  c += `    <span class="key">train</span>: [<span class="str">"${document.getElementById('trainStart').value}"</span>, <span class="str">"${document.getElementById('trainEnd').value}"</span>]\n`;
+  c += `    <span class="key">valid</span>: [<span class="str">"${document.getElementById('validStart').value}"</span>, <span class="str">"${document.getElementById('validEnd').value}"</span>]\n`;
+  c += `    <span class="key">test</span>:  [<span class="str">"${document.getElementById('testStart').value}"</span>, <span class="str">"${document.getElementById('testEnd').value}"</span>]\n`;
+
+  c += `\n<span class="key">label</span>: <span class="str">"${LABEL_EXPRS[labelType] || document.getElementById('customLabel')?.value || ''}"</span>\n`;
+
+  c += `\n<span class="key">strategy</span>:\n`;
+  if (strategy === 'topk') {
+    c += `  <span class="key">class</span>: <span class="str">"TopkDropoutStrategy"</span>\n`;
+    c += `  <span class="key">topk</span>: <span class="num">${document.getElementById('topK').value}</span>\n`;
+    c += `  <span class="key">n_drop</span>: <span class="num">${document.getElementById('nDrop').value}</span>\n`;
+  } else {
+    c += `  <span class="key">class</span>: <span class="str">"SignalThreshold"</span>\n`;
+    c += `  <span class="key">buy_threshold</span>: <span class="num">${document.getElementById('buyThreshold').value}</span>\n`;
+  }
+  c += `  <span class="key">capital</span>: <span class="num">${document.getElementById('capital').value}</span>\n`;
+
+  document.getElementById('configPreview').innerHTML = c;
+}
+
+// ===== API BASE URL =====
+const API_BASE = window.location.origin;
+
+// ===== BUILD CONFIG FROM FORM =====
+function buildRequestBody() {
+  const m = MODELS[selectedModel];
+  const featureSet = document.getElementById('featureSet').value;
+  const strategy = document.getElementById('strategyType').value;
+  const labelType = document.getElementById('labelType').value;
+  const dataSource = document.getElementById('dataSource').value;
+  const kline = document.getElementById('klineInterval').value;
+  const trainingPool = document.getElementById('trainingPool').value;
+  const tickers = [...document.querySelectorAll('.ticker-tag')].map(t => t.textContent.replace('\u00d7','').trim());
+  const params = m.params || PYTORCH_PARAMS;
+
+  // Collect hyperparameters
+  const kwargs = {};
+  params.forEach(p => {
+    const el = document.getElementById(`hp_${p.key}`);
+    const val = el ? el.value : p.default;
+    kwargs[p.key] = p.type === 'select' ? val : Number(val);
+  });
+
+  // Build dataset config
+  const datasetConfig = {
+    dataset_class: m.dataType === 'ts' ? 'TSDatasetH' : 'DatasetH',
+    handler: featureSet.replace('_20', ''),
+    feature_set: featureSet,
+    segments: {
+      train: [document.getElementById('trainStart').value, document.getElementById('trainEnd').value],
+      valid: [document.getElementById('validStart').value, document.getElementById('validEnd').value],
+      test:  [document.getElementById('testStart').value,  document.getElementById('testEnd').value],
+    },
+  };
+  if (m.dataType === 'ts') {
+    datasetConfig.step_len = Number(document.getElementById('stepLen').value);
+  }
+
+  // Build strategy config
+  const strategyConfig = {
+    capital: Number(document.getElementById('capital').value),
+  };
+  if (strategy === 'topk') {
+    strategyConfig.strategy_class = 'TopkDropoutStrategy';
+    strategyConfig.topk = Number(document.getElementById('topK').value);
+    strategyConfig.n_drop = Number(document.getElementById('nDrop').value);
+  } else {
+    strategyConfig.strategy_class = 'SignalThreshold';
+    strategyConfig.buy_threshold = Number(document.getElementById('buyThreshold').value);
+  }
+
+  // Label expression
+  const label = LABEL_EXPRS[labelType] || document.getElementById('customLabel')?.value || '';
+
+  return {
+    model: {
+      model_class: selectedModel,
+      module_path: m.module,
+      kwargs: kwargs,
+    },
+    dataset: datasetConfig,
+    data_source: dataSource,
+    kline: kline,
+    target: tickers,
+    training_pool: trainingPool,
+    label: label,
+    strategy: strategyConfig,
+  };
+}
+
+// ===== START BACKTEST =====
+let currentSSE = null;
+
+async function startBacktest() {
+  // Validate
+  if (!selectedModel) { alert('Please select a model first'); return; }
+  const tickers = [...document.querySelectorAll('.ticker-tag')].map(t => t.textContent.replace('\u00d7','').trim());
+  if (tickers.length === 0) { alert('Please enter a target stock'); return; }
+
+  // Switch to execution page
+  goToPage('exec');
+  resetExecUI();
+
+  const body = buildRequestBody();
+  addLog('Submitting backtest request...', 'info');
+
+  try {
+    const resp = await fetch(`${API_BASE}/api/backtest`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({ detail: resp.statusText }));
+      const msg = typeof err.detail === 'string' ? err.detail
+        : Array.isArray(err.detail) ? err.detail.map(e => e.msg || e.loc?.join('.')).join('; ')
+        : JSON.stringify(err);
+      throw new Error(`Server rejected request (${resp.status}): ${msg}`);
+    }
+
+    const { job_id } = await resp.json();
+    addLog(`Backtest job created: ${job_id}`, 'success');
+    connectSSE(job_id);
+  } catch (e) {
+    addLog(`Request failed: ${e.message}`, 'error');
+    setProgress('Request failed', 0);
+    document.getElementById('progressBar').classList.add('error');
+    document.getElementById('execTitle').textContent = 'Backtest Failed';
+    document.getElementById('execSubtitle').textContent = 'Please check if the backend service is running (python -m backtest_server.server)';
+  }
+}
+
+// ===== SSE STREAMING =====
+function connectSSE(jobId) {
+  if (currentSSE) { currentSSE.close(); currentSSE = null; }
+
+  const sse = new EventSource(`${API_BASE}/api/backtest/${jobId}/stream`);
+  currentSSE = sse;
+
+  sse.addEventListener('step', e => {
+    const d = JSON.parse(e.data);
+    setStepState(d.step, d.state);
+  });
+
+  sse.addEventListener('log', e => {
+    const d = JSON.parse(e.data);
+    addLog(d.msg, d.type || 'info');
+  });
+
+  sse.addEventListener('progress', e => {
+    const d = JSON.parse(e.data);
+    setProgress(d.label || '', d.pct);
+  });
+
+  sse.addEventListener('result', e => {
+    const data = JSON.parse(e.data);
+    sse.close();
+    currentSSE = null;
+    setProgress('Backtest complete', 100);
+    document.getElementById('execTitle').textContent = 'Backtest Complete';
+    document.getElementById('execSubtitle').textContent = 'Results below. You can go back to adjust parameters and rerun.';
+    showResults(data);
+  });
+
+  sse.addEventListener('error', e => {
+    // SSE protocol error vs server-sent error event
+    if (e.data) {
+      const d = JSON.parse(e.data);
+      addLog(`Error: ${d.msg}`, 'error');
+      if (d.step >= 0) setStepState(d.step, 'error');
+    } else {
+      addLog('SSE connection closed', 'error');
+    }
+    sse.close();
+    currentSSE = null;
+    document.getElementById('progressBar').classList.add('error');
+    document.getElementById('execTitle').textContent = 'Backtest Failed';
+    document.getElementById('execSubtitle').textContent = 'Check logs for details. You can go back and retry.';
+  });
+
+  sse.addEventListener('ping', e => {
+    try { const d = JSON.parse(e.data); if (d.msg) addLog(d.msg, 'info'); } catch(_) {}
+  });
+}
+
+function resetExecUI() {
+  // Reset steps
+  for (let i = 0; i < 6; i++) {
+    const el = document.getElementById('step' + i);
+    el.className = 'step-item';
+  }
+  setProgress('Preparing...', 0);
+
+  // Clear logs
+  document.getElementById('logBody').innerHTML = '';
+  document.getElementById('logCount').textContent = '0 entries';
+
+  // Hide results
+  document.getElementById('resultsSection').classList.add('hidden');
+
+  // Reset title
+  document.getElementById('execTitle').textContent = 'Backtest Running';
+  document.getElementById('execSubtitle').textContent = 'Running backtest, please wait...';
+
+  // Reset progress bar
+  document.getElementById('progressBar').classList.remove('error');
+}
+
+function setStepState(index, state) {
+  const el = document.getElementById('step' + index);
+  el.className = 'step-item ' + state;
+  if (state === 'done') {
+    el.querySelector('.step-circle').textContent = '✓';
+  } else if (state === 'error') {
+    el.querySelector('.step-circle').textContent = '✗';
+  }
+}
+
+function setProgress(label, pct) {
+  document.getElementById('currentStepText').textContent = label;
+  document.getElementById('pctText').textContent = pct + '%';
+  document.getElementById('progressBar').style.width = pct + '%';
+}
+
+function addLog(msg, type) {
+  const body = document.getElementById('logBody');
+  const now = new Date();
+  const time = now.toTimeString().substring(0, 8);
+  const line = document.createElement('div');
+  line.className = `log-line ${type}`;
+  line.innerHTML = `<span class="time">[${time}]</span><span class="msg">${msg}</span>`;
+  body.appendChild(line);
+  body.scrollTop = body.scrollHeight;
+
+  const count = body.querySelectorAll('.log-line').length;
+  document.getElementById('logCount').textContent = count + ' entries';
+}
+
+// ===== SHOW REAL RESULTS =====
+function showResults(data) {
+  const section = document.getElementById('resultsSection');
+  section.classList.remove('hidden');
+
+  const s = data.summary;
+
+  // Summary
+  const modelRet = s.model_return;
+  document.getElementById('rModelReturn').textContent = (modelRet >= 0 ? '+' : '') + modelRet.toFixed(2) + '%';
+  document.getElementById('rModelReturn').className = 'sc-value ' + (modelRet >= 0 ? 'positive' : 'negative');
+  const bhRet = s.bh_return;
+  document.getElementById('rBhReturn').textContent = (bhRet >= 0 ? '+' : '') + bhRet.toFixed(2) + '%';
+  document.getElementById('rBhReturn').className = 'sc-value ' + (bhRet >= 0 ? 'positive' : 'negative');
+  document.getElementById('rWinRate').textContent = s.win_rate.toFixed(1) + '%';
+  document.getElementById('rTotalTrades').textContent = s.total_trades;
+
+  // Trades
+  const trades = data.trades || [];
+  document.getElementById('tradeTableBody').innerHTML = trades.map(t => {
+    const bp = t.buy_price != null ? `$${t.buy_price.toFixed(2)}` : '-';
+    const sp = t.sell_price != null ? `$${t.sell_price.toFixed(2)}` : '-';
+    const ret = t.return_pct != null ? t.return_pct : null;
+    const retStr = ret != null ? `${ret >= 0 ? '+' : ''}${ret.toFixed(2)}%` : '-';
+    const retClass = ret != null ? (ret >= 0 ? 'positive' : 'negative') : '';
+    const openTag = t.is_open ? ' <span style="color:var(--accent3);font-size:11px">(open)</span>' : '';
+    return `<tr>
+      <td style="font-weight:600;color:var(--accent1)">${t.ticker || '-'}</td>
+      <td>${t.buy_date}</td><td>${bp}</td>
+      <td>${t.sell_date}${openTag}</td><td>${sp}</td>
+      <td>${t.days}d</td>
+      <td class="${retClass}">${retStr}</td>
+    </tr>`;
+  }).join('');
+
+  // Timeline
+  const bar = document.getElementById('timelineBar');
+  const timeline = data.timeline || [];
+  if (timeline.length > 0) {
+    bar.innerHTML = timeline.map(s =>
+      `<div class="timeline-seg ${s.type}" style="flex:${s.pct}"></div>`
+    ).join('');
+  } else {
+    bar.innerHTML = '<div class="timeline-seg empty" style="flex:100"></div>';
+  }
+
+  // Segments table
+  const segments = data.segments || [];
+  document.getElementById('segmentTableBody').innerHTML = segments.map(seg => {
+    const isHold = seg.type === 'hold';
+    const typeStyle = isHold ? 'color:var(--accent2)' : 'color:var(--text-dim)';
+    const typeText = isHold ? 'Holding' : 'Empty';
+    const sp = seg.start_price != null ? `$${seg.start_price.toFixed(2)}` : '-';
+    const ep = seg.end_price != null ? `$${seg.end_price.toFixed(2)}` : '-';
+    const chg = seg.change_pct != null ? seg.change_pct : null;
+    const chgStr = chg != null ? `${chg >= 0 ? '+' : ''}${chg.toFixed(2)}%` : '-';
+    const chgClass = chg != null ? (chg >= 0 ? 'positive' : 'negative') : '';
+    return `<tr>
+      <td style="font-weight:600;color:var(--accent1)">${seg.ticker || '-'}</td>
+      <td style="${typeStyle}">${typeText}</td>
+      <td>${seg.start}</td><td>${seg.end}</td>
+      <td>${sp}</td><td>${ep}</td>
+      <td>${seg.days}d</td>
+      <td class="${chgClass}">${chgStr}</td>
+    </tr>`;
+  }).join('');
+
+  // Holding stats
+  const hs = data.holding_stats;
+  if (hs) {
+    document.getElementById('holdingStats').innerHTML = `
+      Total ${hs.count} holding segments, ${hs.total_days} trading days<br>
+      Profitable: ${hs.profit_segs} / Losing: ${hs.loss_segs}<br>
+      Avg holding return: ${hs.avg_return >= 0 ? '+' : ''}${hs.avg_return.toFixed(2)}%
+    `;
+  } else {
+    document.getElementById('holdingStats').innerHTML = 'No holding data';
+  }
+
+  // Empty stats
+  const es = data.empty_stats;
+  if (es) {
+    document.getElementById('emptyStats').innerHTML = `
+      Total ${es.count} empty segments, ${es.total_days} trading days<br>
+      Missed upside: +${es.missed_up.toFixed(2)}%<br>
+      Avoided downside: -${Math.abs(es.avoided_down).toFixed(2)}%
+    `;
+  } else {
+    document.getElementById('emptyStats').innerHTML = 'No empty period data';
+  }
+}
+
+function switchResultTab(btn, panelId) {
+  btn.parentElement.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  ['tradesPanel','segmentsPanel','statsPanel'].forEach(id => {
+    document.getElementById(id).style.display = id === panelId ? 'block' : 'none';
+  });
+}
+
+// ===== MODEL AVAILABILITY =====
+const modelAvailability = {};  // { modelName: { available, reason } }
+
+async function fetchModelAvailability() {
+  try {
+    const resp = await fetch(`${API_BASE}/api/models`);
+    const models = await resp.json();
+    models.forEach(m => {
+      modelAvailability[m.name] = {
+        available: m.available !== false,
+        reason: m.unavailable_reason || '',
+      };
+    });
+  } catch (e) { /* server offline, assume all available */ }
+  renderModelCards();
+}
+
+// ===== AUTO SCAN =====
+let currentScanSSE = null;
+let currentScanJobId = null;
+// Track model cards by model_class for updates
+let scanModelCards = {};
+
+// All scannable model_class names in scan order (mirrors backend MODEL_SCAN_LIST)
+// Excluded: TRAModel (needs MTSDatasetH), HIST (needs external concept files)
+const SCAN_MODELS = [
+  {id:'LGBModel',       name:'LightGBM',     desc:'Gradient boosting decision tree, fast, good at finding simple feature patterns'},
+  {id:'XGBModel',       name:'XGBoost',       desc:'Classic gradient boosting, stronger regularization, better anti-overfitting'},
+  {id:'CatBoostModel',  name:'CatBoost',      desc:'By Yandex, excellent categorical feature handling'},
+  {id:'LinearModel',    name:'Linear Model',       desc:'Simplest linear regression, serves as baseline reference'},
+  {id:'DEnsembleModel', name:'Ensemble',       desc:'Weighted fusion of multiple base models for stability'},
+  {id:'LSTM_flat',      name:'LSTM',          desc:'Long short-term memory network, captures long-term dependencies in time series'},
+  {id:'GRU_flat',       name:'GRU',           desc:'Simplified LSTM, fewer parameters, faster training'},
+  {id:'ALSTM_flat',     name:'ALSTM',         desc:'LSTM with attention mechanism, focuses on key time points'},
+  {id:'LSTM_ts',        name:'LSTM-TS',       desc:'Time-series enhanced LSTM, models each time step independently'},
+  {id:'GRU_ts',         name:'GRU-TS',        desc:'Time-series enhanced GRU, finer-grained temporal modeling'},
+  {id:'ALSTM_ts',       name:'ALSTM-TS',      desc:'Time-series enhanced ALSTM, dual attention + temporal boost'},
+  {id:'ADARNN',         name:'ADARNN',        desc:'Adaptive RNN, handles distribution drift automatically'},
+  {id:'Transformer_flat',name:'Transformer',  desc:'Self-attention architecture, captures feature relationships at any distance'},
+  {id:'GATs_flat',      name:'GATs',          desc:'Graph attention network, models inter-stock relationships'},
+  {id:'Transformer_ts', name:'Transformer-TS',desc:'Time-series enhanced Transformer, processes time windows step by step'},
+  {id:'LocalFormer_ts', name:'LocalFormer',   desc:'Local attention Transformer, focuses on nearby temporal patterns'},
+  {id:'GATs_ts',        name:'GATs-TS',       desc:'Time-series enhanced graph attention, balances correlation and temporality'},
+  {id:'TCN_flat',       name:'TCN',           desc:'Temporal convolutional network, replaces recurrence with convolution for high parallelism'},
+  {id:'TabnetModel',    name:'TabNet',        desc:'By Google, auto-selects important features, highly interpretable'},
+  {id:'SFM',            name:'SFM',           desc:'State frequency memory network, analyzes time series from frequency domain'},
+  {id:'DNNModelPytorch',name:'DNN',           desc:'Deep fully connected network, universal nonlinear approximator'},
+  {id:'TCN_ts',         name:'TCN-TS',        desc:'Time-series enhanced TCN, finer time window convolution'},
+];
+
+function selectScanStyle(el) {
+  el.parentElement.querySelectorAll('.scan-style-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  const hints = {
+    ultra_short: 'Day trade: hold 1-2 days, trained on ~6 months of data',
+    swing: 'Swing: hold 1-2 weeks, trained on ~24 months of data',
+  };
+  const hint = document.getElementById('scanStyleHint');
+  if (hint) hint.textContent = hints[el.dataset.style] || '';
+}
+
+function initScanModelGrid() {
+  const grid = document.getElementById('scanModelGrid');
+  grid.innerHTML = '';
+  scanModelCards = {};
+  SCAN_MODELS.forEach(m => {
+    const card = document.createElement('div');
+    card.className = 'scan-model-card smc-pending';
+    card.title = m.desc;
+    card.innerHTML = `<div class="smc-name">${m.name}</div><div class="smc-desc">${m.desc}</div><div class="smc-status">Waiting</div>`;
+    grid.appendChild(card);
+    scanModelCards[m.id] = card;
+  });
+}
+
+function updateScanModelCard(mc, state, info) {
+  const card = scanModelCards[mc];
+  if (!card) return;
+  card.className = 'scan-model-card smc-' + state;
+  const statusEl = card.querySelector('.smc-status');
+  if (state === 'running') {
+    statusEl.textContent = 'Running...';
+  } else if (state === 'completed') {
+    const ret = info && info.model_return != null ? `${info.model_return >= 0 ? '+' : ''}${info.model_return.toFixed(2)}%` : 'Done';
+    statusEl.textContent = ret;
+  } else if (state === 'failed') {
+    statusEl.textContent = 'Failed';
+    statusEl.title = info || '';
+  } else if (state === 'skipped') {
+    statusEl.textContent = 'Skipped';
+    statusEl.title = info || '';
+  }
+}
+
+function addScanLog(msg) {
+  const body = document.getElementById('scanLogBody');
+  const now = new Date();
+  const time = now.toTimeString().substring(0, 8);
+  const line = document.createElement('div');
+  line.style.color = 'var(--text-dim)';
+  line.innerHTML = `<span style="color:var(--text-dim);margin-right:8px">[${time}]</span>${msg}`;
+  body.appendChild(line);
+  body.scrollTop = body.scrollHeight;
+}
+
+async function startScan() {
+  const ticker = document.getElementById('scanTicker').value.trim().toUpperCase();
+  if (!ticker) { alert('Please enter a stock ticker'); return; }
+  const dataSource = document.getElementById('scanDataSource').value;
+  const styleEl = document.querySelector('.scan-style-btn.active');
+  const tradingStyle = styleEl ? styleEl.dataset.style : 'ultra_short';
+
+  // Show progress, hide results/prediction
+  document.getElementById('scanProgressSection').classList.remove('hidden');
+  document.getElementById('scanResultsSection').classList.add('hidden');
+  document.getElementById('scanPredictSection').classList.add('hidden');
+  document.getElementById('scanStartBtn').disabled = true;
+
+  // Init model grid
+  initScanModelGrid();
+  document.getElementById('scanLogBody').innerHTML = '';
+  document.getElementById('scanBarFill').style.width = '0%';
+  document.getElementById('scanProgressLabel').textContent = 'Preparing...';
+  document.getElementById('scanPctText').textContent = '0%';
+
+  addScanLog(`Starting scan: ${ticker} (${dataSource}, ${tradingStyle})`);
+
+  try {
+    const resp = await fetch(`${API_BASE}/api/scan`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ticker, data_source: dataSource, trading_style: tradingStyle }),
+    });
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({ detail: resp.statusText }));
+      throw new Error(typeof err.detail === 'string' ? err.detail : JSON.stringify(err));
+    }
+    const { job_id } = await resp.json();
+    currentScanJobId = job_id;
+    addScanLog(`Scan job created: ${job_id}`);
+    connectScanSSE(job_id);
+  } catch (e) {
+    addScanLog(`Request failed: ${e.message}`);
+    document.getElementById('scanStartBtn').disabled = false;
+  }
+}
+
+function connectScanSSE(jobId) {
+  if (currentScanSSE) { currentScanSSE.close(); currentScanSSE = null; }
+
+  const sse = new EventSource(`${API_BASE}/api/scan/${jobId}/stream`);
+  currentScanSSE = sse;
+  currentScanJobId = jobId;
+
+  sse.addEventListener('scan_start', e => {
+    const d = JSON.parse(e.data);
+    addScanLog(`Scan started: ${d.ticker}, ${d.total_models} models`);
+  });
+
+  sse.addEventListener('scan_model_start', e => {
+    const d = JSON.parse(e.data);
+    updateScanModelCard(d.model_class, 'running');
+    addScanLog(`[${d.index}/${d.total}] Starting ${d.model_class}`);
+  });
+
+  sse.addEventListener('scan_model_complete', e => {
+    const d = JSON.parse(e.data);
+    updateScanModelCard(d.model_class, 'completed', d.summary);
+    const ret = d.summary && d.summary.model_return != null ? `${d.summary.model_return.toFixed(2)}%` : '-';
+    const dur = d.duration_s != null ? ` (${d.duration_s.toFixed(1)}s)` : '';
+    addScanLog(`${d.model_class} done: return ${ret}${dur}`);
+  });
+
+  sse.addEventListener('scan_model_failed', e => {
+    const d = JSON.parse(e.data);
+    updateScanModelCard(d.model_class, 'failed', d.error);
+    addScanLog(`${d.model_class} failed: ${d.error}`);
+  });
+
+  sse.addEventListener('scan_model_skipped', e => {
+    const d = JSON.parse(e.data);
+    updateScanModelCard(d.model_class, 'skipped', d.reason);
+    addScanLog(`${d.model_class} skipped: ${d.reason}`);
+  });
+
+  sse.addEventListener('scan_progress', e => {
+    const d = JSON.parse(e.data);
+    const pct = d.pct || 0;
+    document.getElementById('scanBarFill').style.width = pct + '%';
+    document.getElementById('scanPctText').textContent = pct + '%';
+    document.getElementById('scanProgressLabel').textContent =
+      `${d.completed}/${d.total} models complete`;
+    if (d.current_model) {
+      updateScanModelCard(d.current_model, 'running');
+    }
+  });
+
+  sse.addEventListener('scan_complete', e => {
+    const d = JSON.parse(e.data);
+    sse.close();
+    currentScanSSE = null;
+    currentScanJobId = null;
+    document.getElementById('scanBarFill').style.width = '100%';
+    document.getElementById('scanPctText').textContent = '100%';
+    document.getElementById('scanProgressLabel').textContent = 'Scan complete';
+    document.getElementById('scanStartBtn').disabled = false;
+    addScanLog(`Scan complete! Best model: ${d.best_model || 'None'} (${d.best_reason || ''})`);
+    showScanResults(d);
+    loadScanHistory();
+  });
+
+  sse.addEventListener('scan_error', e => {
+    const d = JSON.parse(e.data);
+    sse.close();
+    currentScanSSE = null;
+    currentScanJobId = null;
+    document.getElementById('scanStartBtn').disabled = false;
+    addScanLog(`Scan failed: ${d.msg}`);
+  });
+
+  sse.addEventListener('ping', () => {});
+
+  sse.onerror = () => {
+    sse.close();
+    currentScanSSE = null;
+    // Auto-reconnect after 3 seconds
+    if (currentScanJobId) {
+      addScanLog('SSE connection lost, auto-reconnecting in 3s...');
+      setTimeout(() => {
+        if (currentScanJobId) {
+          addScanLog('Reconnecting...');
+          connectScanSSE(currentScanJobId);
+        }
+      }, 3000);
+    } else {
+      addScanLog('SSE connection closed');
+      document.getElementById('scanStartBtn').disabled = false;
+    }
+  };
+}
+
+// Model ID → friendly name lookup
+const _modelNames = {};
+SCAN_MODELS.forEach(m => { _modelNames[m.id] = m.name; });
+function modelDisplayName(id) { return _modelNames[id] || id; }
+
+async function fetchAlphaScore(ticker) {
+  const card = document.getElementById('alphaScoreCard');
+  if (!ticker) { card.style.display = 'none'; return; }
+  try {
+    const resp = await fetch(`${API_BASE}/api/score/${encodeURIComponent(ticker)}`);
+    if (!resp.ok) { card.style.display = 'none'; return; }
+    const data = await resp.json();
+    const a = data.alpha_score;
+    const colors = { buy: '#34d399', sell: '#ef4444', hold: '#f59e0b' };
+    const color = colors[a.signal] || '#4d9fff';
+    const circumf = 2 * Math.PI * 42;
+    const offset = circumf - (a.score / 10) * circumf;
+    document.getElementById('alphaScoreArc').setAttribute('stroke', color);
+    document.getElementById('alphaScoreArc').setAttribute('stroke-dashoffset', offset);
+    document.getElementById('alphaScoreNum').textContent = a.score;
+    document.getElementById('alphaScoreLabel').textContent = a.label;
+    document.getElementById('alphaScoreLabel').style.color = color;
+    document.getElementById('alphaScoreReason').textContent = a.reason;
+    card.style.display = '';
+  } catch(_) { card.style.display = 'none'; }
+}
+
+function showScanResults(data) {
+  const section = document.getElementById('scanResultsSection');
+  section.classList.remove('hidden');
+
+  // Training period info banner
+  const banner = document.getElementById('scanInfoBanner');
+  if (data.train_months && data.segments) {
+    const s = data.segments;
+    const totalMonths = data.train_months + data.valid_months + data.test_months;
+    banner.innerHTML =
+      `<strong style="color:var(--text-secondary)">Training Config: </strong>` +
+      `Train <b style="color:var(--accent1)">${data.train_months}</b> months (${s.train[0]} ~ ${s.train[1]}) → ` +
+      `Validate <b style="color:var(--accent1)">${data.valid_months}</b> months (${s.valid[0]} ~ ${s.valid[1]}) → ` +
+      `Test <b style="color:var(--accent1)">${data.test_months}</b> months (${s.test[0]} ~ ${s.test[1]})` +
+      `&nbsp;&nbsp;|&nbsp;&nbsp;Total <b style="color:var(--text-secondary)">${totalMonths}</b> months of data` +
+      `<br><span style="color:var(--text-dim)">All returns below are <b>test period</b> (out-of-sample) real performance, not training-period fitted results.</span>`;
+    banner.style.display = '';
+  } else {
+    banner.style.display = 'none';
+  }
+
+  // Best model card
+  document.getElementById('scanBestModel').textContent = modelDisplayName(data.best_model) || 'None';
+  document.getElementById('scanBestStats').textContent = data.best_reason || '';
+
+  // Rankings table
+  const rankings = data.rankings || [];
+  const tbody = document.getElementById('scanRankBody');
+  tbody.innerHTML = rankings.map((r, i) => {
+    const ret = r.model_return != null ? `${r.model_return >= 0 ? '+' : ''}${r.model_return.toFixed(2)}%` : '-';
+    const bh = r.bh_return != null ? `${r.bh_return >= 0 ? '+' : ''}${r.bh_return.toFixed(2)}%` : '-';
+    const excess = (r.model_return != null && r.bh_return != null) ? r.model_return - r.bh_return : null;
+    const exStr = excess != null ? `${excess >= 0 ? '+' : ''}${excess.toFixed(2)}%` : '-';
+    const wr = r.win_rate != null ? `${r.win_rate.toFixed(1)}%` : '-';
+    const trades = r.total_trades != null ? r.total_trades : '-';
+    const retClass = r.model_return >= 0 ? 'color:var(--accent2)' : 'color:var(--danger)';
+    const exClass = excess != null ? (excess >= 0 ? 'color:var(--accent2)' : 'color:var(--danger)') : '';
+    return `<tr>
+      <td class="rank-num">${i + 1}</td>
+      <td style="font-weight:600" title="${r.model_class}">${modelDisplayName(r.model_class)}</td>
+      <td style="${retClass}">${ret}</td>
+      <td>${bh}</td>
+      <td style="${exClass}">${exStr}</td>
+      <td>${wr}</td><td>${trades}</td><td>-</td>
+      <td style="color:var(--accent2)">Done</td>
+    </tr>`;
+  }).join('');
+
+  // Show predict button only if there's a best_model
+  document.getElementById('scanPredictBtn').style.display = data.best_model ? '' : 'none';
+
+  // Fetch and display AlphaScore
+  const scanTicker = document.getElementById('scanTicker').value.trim().toUpperCase();
+  fetchAlphaScore(scanTicker);
+}
+
+async function showScanDetail(jobId) {
+  // Fetch full scan details from API and show results
+  try {
+    const resp = await fetch(`${API_BASE}/api/scan/${jobId}`);
+    if (!resp.ok) return;
+    const job = await resp.json();
+    currentScanJobId = jobId;
+
+    if (job.status === 'running') {
+      // Show progress and reconnect SSE
+      document.getElementById('scanProgressSection').classList.remove('hidden');
+      document.getElementById('scanResultsSection').classList.add('hidden');
+      document.getElementById('scanPredictSection').classList.add('hidden');
+      initScanModelGrid();
+      document.getElementById('scanLogBody').innerHTML = '';
+      document.getElementById('scanStartBtn').disabled = true;
+      addScanLog(`Reconnecting to scan job ${jobId.substring(0, 8)}...`);
+
+      // Mark already-completed models from results
+      (job.model_results || []).forEach(r => {
+        if (r.status === 'completed') {
+          updateScanModelCard(r.model_class, 'completed', r.summary);
+        } else if (r.status === 'failed') {
+          updateScanModelCard(r.model_class, 'failed', r.error_msg);
+        } else if (r.status === 'skipped') {
+          updateScanModelCard(r.model_class, 'skipped', r.error_msg);
+        }
+      });
+      // Update progress bar
+      const pct = job.total_models > 0 ? Math.round(job.completed_models / job.total_models * 100) : 0;
+      document.getElementById('scanBarFill').style.width = pct + '%';
+      document.getElementById('scanPctText').textContent = pct + '%';
+      document.getElementById('scanProgressLabel').textContent =
+        `${job.completed_models}/${job.total_models} models complete`;
+
+      connectScanSSE(jobId);
+    } else if (job.status === 'completed') {
+      // Show completed results
+      document.getElementById('scanProgressSection').classList.add('hidden');
+      document.getElementById('scanStartBtn').disabled = false;
+
+      // Build rankings from model_results
+      const rankings = (job.model_results || [])
+        .filter(r => r.status === 'completed' && r.summary)
+        .map(r => ({
+          model_class: r.model_class,
+          model_return: r.summary.model_return,
+          bh_return: r.summary.bh_return,
+          win_rate: r.summary.win_rate,
+          total_trades: r.summary.total_trades,
+          duration_s: r.duration_s,
+          status: r.status,
+        }))
+        .sort((a, b) => b.model_return - a.model_return);
+
+      // Also add failed/skipped
+      const failed = (job.model_results || []).filter(r => r.status !== 'completed');
+
+      showScanResultsFull(rankings, failed, job.best_model, job.best_model_reason, {trading_style: job.trading_style, ticker: job.ticker});
+
+      // If prediction exists, show it
+      if (job.prediction) {
+        showPrediction(job.prediction);
+      }
+    } else if (job.status === 'failed') {
+      document.getElementById('scanProgressSection').classList.add('hidden');
+      document.getElementById('scanStartBtn').disabled = false;
+      addScanLog(`Scan failed: ${job.error_msg || 'Unknown error'}`);
+    }
+  } catch (e) {
+    addScanLog(`Failed to load details: ${e.message}`);
+  }
+}
+
+function showScanResultsFull(rankings, failed, bestModel, bestReason, scanMeta) {
+  const section = document.getElementById('scanResultsSection');
+  section.classList.remove('hidden');
+
+  // Training period info banner (from scan metadata if available)
+  const banner = document.getElementById('scanInfoBanner');
+  if (scanMeta && scanMeta.trading_style) {
+    const presets = { ultra_short: {train:6,valid:1,test:1}, swing: {train:24,valid:6,test:3} };
+    const p = presets[scanMeta.trading_style];
+    if (p) {
+      const totalMonths = p.train + p.valid + p.test;
+      const styleName = scanMeta.trading_style === 'ultra_short' ? 'Day Trade' : 'Swing';
+      banner.innerHTML =
+        `<strong style="color:var(--text-secondary)">Training Config (${styleName}): </strong>` +
+        `Train <b style="color:var(--accent1)">${p.train}</b> months → ` +
+        `Validate <b style="color:var(--accent1)">${p.valid}</b> months → ` +
+        `Test <b style="color:var(--accent1)">${p.test}</b> months` +
+        `&nbsp;&nbsp;|&nbsp;&nbsp;Total <b style="color:var(--text-secondary)">${totalMonths}</b> months of data` +
+        `<br><span style="color:var(--text-dim)">All returns below are <b>test period</b> (out-of-sample) real performance, not training-period fitted results.</span>`;
+      banner.style.display = '';
+    } else {
+      banner.style.display = 'none';
+    }
+  } else {
+    banner.style.display = 'none';
+  }
+
+  document.getElementById('scanBestModel').textContent = modelDisplayName(bestModel) || 'None';
+  document.getElementById('scanBestStats').textContent = bestReason || '';
+
+  const tbody = document.getElementById('scanRankBody');
+  let rows = rankings.map((r, i) => {
+    const ret = r.model_return != null ? `${r.model_return >= 0 ? '+' : ''}${r.model_return.toFixed(2)}%` : '-';
+    const bh = r.bh_return != null ? `${r.bh_return >= 0 ? '+' : ''}${r.bh_return.toFixed(2)}%` : '-';
+    const excess = (r.model_return != null && r.bh_return != null) ? r.model_return - r.bh_return : null;
+    const exStr = excess != null ? `${excess >= 0 ? '+' : ''}${excess.toFixed(2)}%` : '-';
+    const wr = r.win_rate != null ? `${r.win_rate.toFixed(1)}%` : '-';
+    const trades = r.total_trades != null ? r.total_trades : '-';
+    const dur = r.duration_s != null ? `${r.duration_s.toFixed(0)}s` : '-';
+    const retClass = r.model_return >= 0 ? 'color:var(--accent2)' : 'color:var(--danger)';
+    const exClass = excess != null ? (excess >= 0 ? 'color:var(--accent2)' : 'color:var(--danger)') : '';
+    return `<tr>
+      <td class="rank-num">${i + 1}</td>
+      <td style="font-weight:600" title="${r.model_class}">${modelDisplayName(r.model_class)}</td>
+      <td style="${retClass}">${ret}</td>
+      <td>${bh}</td>
+      <td style="${exClass}">${exStr}</td>
+      <td>${wr}</td><td>${trades}</td><td>${dur}</td>
+      <td style="color:var(--accent2)">Done</td>
+    </tr>`;
+  });
+
+  // Append failed/skipped
+  failed.forEach(r => {
+    const stColor = r.status === 'failed' ? 'var(--danger)' : 'var(--text-dim)';
+    const stText = r.status === 'failed' ? 'Failed' : 'Skipped';
+    rows.push(`<tr style="opacity:0.6">
+      <td class="rank-num">-</td>
+      <td title="${r.model_class}">${modelDisplayName(r.model_class)}</td>
+      <td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td>
+      <td style="color:${stColor}">${stText}</td>
+    </tr>`);
+  });
+
+  tbody.innerHTML = rows.join('');
+  document.getElementById('scanPredictBtn').style.display = bestModel ? '' : 'none';
+
+  // Fetch and display AlphaScore
+  if (scanMeta && scanMeta.ticker) {
+    fetchAlphaScore(scanMeta.ticker);
+  } else {
+    const scanTicker = document.getElementById('scanTicker').value.trim().toUpperCase();
+    fetchAlphaScore(scanTicker);
+  }
+}
+
+async function runPrediction() {
+  if (!currentScanJobId) return;
+  const btn = document.getElementById('scanPredictBtn');
+  btn.disabled = true;
+  btn.textContent = 'Predicting...';
+
+  try {
+    const resp = await fetch(`${API_BASE}/api/scan/${currentScanJobId}/predict`, {
+      method: 'POST',
+    });
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({ detail: resp.statusText }));
+      throw new Error(typeof err.detail === 'string' ? err.detail : JSON.stringify(err));
+    }
+    const data = await resp.json();
+    showPrediction(data);
+  } catch (e) {
+    alert(`Prediction failed: ${e.message}`);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Predict Future Actions';
+  }
+}
+
+function showPrediction(data) {
+  const section = document.getElementById('scanPredictSection');
+  section.classList.remove('hidden');
+
+  const friendlyModel = modelDisplayName(data.model_class);
+
+  // Signal card with human-readable explanation
+  const signalMap = { buy: 'Buy Signal', sell: 'Sell Signal', hold: 'Hold / Wait' };
+  const explainMap = {
+    buy: `${friendlyModel} model predicts ${data.ticker} is likely to rise, score above buy threshold`,
+    sell: `${friendlyModel} model predicts ${data.ticker} is likely to fall, score below sell threshold`,
+    hold: `${friendlyModel} model has no clear directional signal for ${data.ticker}, suggest waiting`,
+  };
+  const signalClass = `signal-${data.latest_signal}`;
+  const scoreAbs = Math.abs(data.latest_score);
+  const strength = scoreAbs > 0.01 ? 'Strong' : scoreAbs > 0.003 ? 'Moderate' : 'Weak';
+
+  document.getElementById('scanPredictCard').innerHTML = `
+    <div class="predict-signal-card ${signalClass}">
+      <div class="signal-label">${data.ticker} · Predicted by ${friendlyModel}</div>
+      <div class="signal-action">${signalMap[data.latest_signal] || data.latest_signal}</div>
+      <div style="font-size:14px;color:var(--text-dim);margin:8px 0 4px;line-height:1.6">
+        ${explainMap[data.latest_signal] || ''}. Signal strength: <b style="color:var(--text-secondary)">${strength}</b>
+      </div>
+      <div style="margin-top:10px">
+        <details style="cursor:pointer">
+          <summary style="font-size:12px;color:var(--text-dim);user-select:none">Show technical details</summary>
+          <div class="signal-meta" style="margin-top:6px">
+            Prediction score: ${data.latest_score.toFixed(6)} &nbsp;|&nbsp;
+            Buy threshold: ${data.threshold.toFixed(6)} &nbsp;|&nbsp;
+            Prediction date range: ${data.prediction_range[0]} ~ ${data.prediction_range[1]}
+          </div>
+        </details>
+      </div>
+    </div>
+  `;
+
+  // Timeline with human-readable signals
+  const timeline = document.getElementById('scanPredictTimeline');
+  const signals = data.signals || [];
+  const reversed = [...signals].reverse();
+  timeline.innerHTML = reversed.map(s => {
+    const cls = s.signal;
+    const label = signalMap[s.signal] || s.signal;
+    return `<div class="predict-row">
+      <span class="pr-date">${s.date}</span>
+      <span class="pr-signal ${cls}">${label}</span>
+    </div>`;
+  }).join('');
+}
+
+async function loadScanHistory() {
+  try {
+    const resp = await fetch(`${API_BASE}/api/scan/list`);
+    if (!resp.ok) return;
+    const jobs = await resp.json();
+    const list = document.getElementById('scanHistoryList');
+    if (jobs.length === 0) {
+      list.innerHTML = '<div style="color:var(--text-dim);font-size:13px;padding:10px 0">No history yet</div>';
+      return;
+    }
+    list.innerHTML = jobs.map(j => {
+      const styleLabel = j.trading_style === 'ultra_short' ? 'Day Trade' : 'Swing';
+      const dsLabel = j.data_source === 'db' ? 'DB' : j.data_source === 'yfinance' ? 'YF' : 'BS';
+      let statusClass = 's-' + j.status;
+      let statusText = j.status;
+      if (j.status === 'running') statusText = `Running (${j.completed_models || 0}/${j.total_models || 0})`;
+      else if (j.status === 'completed') statusText = 'Completed';
+      else if (j.status === 'failed') statusText = 'Failed';
+      else if (j.status === 'pending') { statusText = 'Pending'; statusClass = 's-running'; }
+      const bestText = j.best_model ? `Best: ${j.best_model}` : '';
+      const time = j.created_at ? j.created_at.substring(0, 16).replace('T', ' ') : '';
+
+      return `<div class="scan-history-item" onclick="showScanDetail('${j.id}')">
+        <span class="shi-ticker">${j.ticker}</span>
+        <span class="shi-style">${dsLabel} · ${styleLabel}</span>
+        <span class="shi-status ${statusClass}">${statusText}</span>
+        <span class="shi-best">${bestText}</span>
+        <span class="shi-time">${time}</span>
+      </div>`;
+    }).join('');
+  } catch (e) { /* server offline */ }
+}
+
+// ===== INIT =====
+document.addEventListener('DOMContentLoaded', () => {
+  renderModelCards();
+  updateConfigPreview();
+  fetchModelAvailability();
+  loadScanHistory();
+
+  // Add live config update listeners
+  document.querySelectorAll('#pageConfig select, #pageConfig input').forEach(el => {
+    el.addEventListener('change', updateConfigPreview);
+  });
+});
+
+// ===== QUICK PREDICT =====
+let quickStyle = 'ultra_short';
+
+function selectQuickStyle(el) {
+  el.parentElement.querySelectorAll('.scan-style-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  quickStyle = el.dataset.style;
+}
+
+async function runQuickPredict() {
+  const ticker = document.getElementById('quickTicker').value.trim().toUpperCase();
+  if (!ticker) { alert('Please enter a ticker symbol'); return; }
+
+  const btn = document.getElementById('quickPredictBtn');
+  btn.disabled = true;
+  btn.textContent = 'Predicting...';
+
+  document.getElementById('quickResultSection').classList.add('hidden');
+  document.getElementById('quickErrorSection').classList.add('hidden');
+
+  try {
+    const resp = await fetch('/api/quick-predict', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ticker, trading_style: quickStyle }),
+    });
+
+    if (!resp.ok) {
+      const err = await resp.json();
+      throw new Error(err.detail || 'Prediction failed');
+    }
+
+    const data = await resp.json();
+    const pred = data.prediction;
+
+    // Show result section
+    document.getElementById('quickResultSection').classList.remove('hidden');
+
+    // Signal display
+    const sigEl = document.getElementById('qSignal');
+    const sig = pred.latest_signal;
+    sigEl.textContent = sig === 'buy' ? 'BUY' : sig === 'sell' ? 'SELL' : 'HOLD';
+    sigEl.className = 'sc-value ' + (sig === 'buy' ? 'positive' : sig === 'sell' ? 'negative' : '');
+    sigEl.style.fontSize = '24px';
+
+    document.getElementById('qScore').textContent = pred.latest_score.toFixed(4);
+    document.getElementById('qThreshold').textContent = pred.threshold.toFixed(4);
+    document.getElementById('qModel').textContent = data.model_class || pred.model_class;
+
+    // Cache info
+    if (data.source === 'cache') {
+      document.getElementById('qCacheInfo').textContent = 'Cached result from ' + (data.cached_at || '').split('T')[0];
+    } else {
+      document.getElementById('qCacheInfo').textContent = 'Fresh prediction generated just now';
+    }
+
+    // Signal table
+    const signals = pred.signals || [];
+    const recent = signals.slice(-30); // last 30 days
+    document.getElementById('quickSignalTable').innerHTML = recent.map(s => {
+      const sigClass = s.signal === 'buy' ? 'positive' : s.signal === 'sell' ? 'negative' : '';
+      const sigLabel = s.signal === 'buy' ? 'BUY' : s.signal === 'sell' ? 'SELL' : 'HOLD';
+      return `<tr>
+        <td>${s.date}</td>
+        <td>${s.score.toFixed(4)}</td>
+        <td class="${sigClass}" style="font-weight:600">${sigLabel}</td>
+      </tr>`;
+    }).reverse().join('');
+
+  } catch (e) {
+    document.getElementById('quickErrorSection').classList.remove('hidden');
+    document.getElementById('quickErrorMsg').textContent = e.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Predict Now';
+  }
+}
+</script>
+
+</body>
+</html>

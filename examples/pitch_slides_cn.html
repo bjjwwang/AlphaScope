@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AlphaScout — Pitch</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+:root {
+  --bg:#0a0e17; --card:#131a2b; --border:#1e2d45;
+  --t:#c4d3e8; --dim:#6b7f99; --bright:#eaf0f8; --w:#ffffff;
+  --blue:#4d9fff; --green:#34d399; --orange:#f59e0b;
+  --red:#ef4444; --purple:#a78bfa; --cyan:#22d3ee;
+  --grad:linear-gradient(135deg,#4d9fff,#34d399);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--t);overflow:hidden;width:100vw;height:100vh;}
+
+/* === DECK === */
+.deck{width:100vw;height:100vh;position:relative;}
+.slide{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:60px 80px;opacity:0;pointer-events:none;transition:opacity .5s;}
+.slide.active{opacity:1;pointer-events:all;}
+
+/* progress + counter */
+.pbar{position:fixed;top:0;left:0;height:3px;background:var(--grad);transition:width .4s;z-index:200;}
+.cnt{position:fixed;bottom:20px;right:28px;font-size:12px;color:var(--dim);z-index:200;font-variant-numeric:tabular-nums;}
+.wm{position:fixed;top:20px;left:28px;font-size:14px;font-weight:800;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;z-index:200;}
+.hint{position:fixed;bottom:20px;left:28px;font-size:11px;color:var(--dim);opacity:.4;z-index:200;}
+
+/* === ANIMATIONS === */
+@keyframes fadeUp{from{opacity:0;transform:translateY(30px);}to{opacity:1;transform:translateY(0);}}
+@keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+@keyframes scaleIn{from{opacity:0;transform:scale(.85);}to{opacity:1;transform:scale(1);}}
+@keyframes slideLeft{from{opacity:0;transform:translateX(60px);}to{opacity:1;transform:translateX(0);}}
+@keyframes slideRight{from{opacity:0;transform:translateX(-60px);}to{opacity:1;transform:translateX(0);}}
+@keyframes countUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
+@keyframes ringDraw{from{stroke-dashoffset:264;}to{stroke-dashoffset:var(--target-offset);}}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 #34d39944;}50%{box-shadow:0 0 0 12px #34d39900;}}
+@keyframes typewriter{from{width:0;}to{width:100%;}}
+
+.slide.active .a-up{animation:fadeUp .6s ease both;}
+.slide.active .a-up-d1{animation:fadeUp .6s .15s ease both;}
+.slide.active .a-up-d2{animation:fadeUp .6s .3s ease both;}
+.slide.active .a-up-d3{animation:fadeUp .6s .45s ease both;}
+.slide.active .a-up-d4{animation:fadeUp .6s .6s ease both;}
+.slide.active .a-up-d5{animation:fadeUp .6s .75s ease both;}
+.slide.active .a-scale{animation:scaleIn .5s ease both;}
+.slide.active .a-scale-d1{animation:scaleIn .5s .2s ease both;}
+.slide.active .a-scale-d2{animation:scaleIn .5s .4s ease both;}
+.slide.active .a-scale-d3{animation:scaleIn .5s .6s ease both;}
+.slide.active .a-left{animation:slideLeft .6s ease both;}
+.slide.active .a-left-d1{animation:slideLeft .6s .15s ease both;}
+.slide.active .a-left-d2{animation:slideLeft .6s .3s ease both;}
+.slide.active .a-right{animation:slideRight .6s ease both;}
+.slide.active .a-fade{animation:fadeIn .6s ease both;}
+.slide.active .a-fade-d1{animation:fadeIn .6s .3s ease both;}
+.slide.active .a-fade-d2{animation:fadeIn .6s .6s ease both;}
+.slide.active .a-fade-d3{animation:fadeIn .6s .9s ease both;}
+.slide.active .a-count{animation:countUp .5s ease both;}
+.slide.active .a-count-d1{animation:countUp .5s .1s ease both;}
+.slide.active .a-count-d2{animation:countUp .5s .2s ease both;}
+.slide.active .a-count-d3{animation:countUp .5s .3s ease both;}
+
+/* === TYPOGRAPHY === */
+.slide h1{font-size:56px;font-weight:900;color:var(--bright);line-height:1.08;text-align:center;max-width:900px;}
+.slide h2{font-size:42px;font-weight:800;color:var(--bright);line-height:1.15;margin-bottom:20px;}
+.slide h3{font-size:26px;font-weight:700;color:var(--bright);margin-bottom:8px;}
+.slide p{font-size:18px;color:var(--t);line-height:1.6;max-width:700px;}
+.sub{font-size:20px;color:var(--dim);text-align:center;margin-top:12px;max-width:600px;}
+em{font-style:normal;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.tag{display:inline-block;font-size:12px;font-weight:700;padding:5px 14px;border-radius:100px;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:16px;}
+.tag-red{background:#ef444418;color:var(--red);border:1px solid #ef444433;}
+.tag-blue{background:#4d9fff18;color:var(--blue);border:1px solid #4d9fff33;}
+.tag-green{background:#34d39918;color:var(--green);border:1px solid #34d39933;}
+.tag-purple{background:#a78bfa18;color:var(--purple);border:1px solid #a78bfa33;}
+.tag-orange{background:#f59e0b18;color:var(--orange);border:1px solid #f59e0b33;}
+
+/* === COMPONENTS === */
+.glow{position:absolute;border-radius:50%;pointer-events:none;filter:blur(120px);opacity:.08;}
+
+/* pain cards */
+.pain-row{display:flex;gap:20px;margin-top:32px;max-width:960px;width:100%;}
+.pain-card{flex:1;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:24px;text-align:center;}
+.pain-card .icon{font-size:32px;margin-bottom:10px;}
+.pain-card h3{font-size:17px;margin-bottom:6px;}
+.pain-card p{font-size:13px;color:var(--dim);max-width:none;}
+.pain-card .price{font-size:22px;font-weight:800;color:var(--red);margin-top:8px;}
+
+/* insight */
+.vs-box{display:flex;gap:40px;margin-top:36px;align-items:center;max-width:800px;}
+.vs-stock{flex:1;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:24px;text-align:center;}
+.vs-stock .ticker{font-size:28px;font-weight:900;color:var(--bright);}
+.vs-stock .model{font-size:14px;color:var(--green);margin-top:8px;font-weight:600;}
+.vs-x{font-size:28px;color:var(--dim);font-weight:300;}
+
+/* big number */
+.big-eq{font-size:60px;font-weight:900;color:var(--bright);text-align:center;margin-top:36px;line-height:1.2;}
+.big-eq em{font-size:60px;}
+
+/* demo placeholder */
+.demo-box{width:100%;max-width:900px;aspect-ratio:16/9;background:var(--card);border:2px solid var(--border);border-radius:16px;display:flex;align-items:center;justify-content:center;margin-top:20px;position:relative;overflow:hidden;}
+.demo-box::after{content:'';position:absolute;inset:0;background:linear-gradient(135deg,#4d9fff06,#34d39906);}
+.demo-label{z-index:1;text-align:center;}
+.demo-label .main{font-size:18px;color:var(--dim);font-weight:500;}
+.demo-label .url{font-size:14px;color:var(--blue);margin-top:6px;}
+.demo-label .note{font-size:12px;color:var(--dim);margin-top:12px;opacity:.6;}
+
+/* score ring */
+.ring-demo{display:flex;gap:40px;align-items:center;justify-content:center;margin-top:32px;}
+.ring-wrap{text-align:center;}
+.ring{width:120px;height:120px;position:relative;margin:0 auto 8px;}
+.ring svg{width:100%;height:100%;transform:rotate(-90deg);}
+.ring circle{fill:none;stroke-width:8;stroke-linecap:round;}
+.ring .bg{stroke:var(--border);}
+.ring .fg{stroke:var(--green);stroke-dasharray:264;transition:stroke-dashoffset 1.2s ease;}
+.slide.active .ring .fg{stroke-dashoffset:var(--target);}
+.ring .num{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:36px;font-weight:900;color:var(--bright);}
+.ring-ticker{font-size:14px;font-weight:700;color:var(--dim);letter-spacing:1px;}
+.ring-label{font-size:16px;font-weight:700;margin-top:4px;}
+
+/* results table mock */
+.mock-table{width:100%;max-width:800px;margin-top:20px;border-collapse:collapse;background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;}
+.mock-table th{padding:10px 16px;text-align:left;font-size:12px;color:var(--dim);font-weight:600;background:#0d1220;border-bottom:1px solid var(--border);}
+.mock-table td{padding:10px 16px;font-size:14px;border-bottom:1px solid var(--border);}
+.mock-table tr:last-child td{border:none;}
+.mock-table .rank{color:var(--dim);font-weight:600;width:40px;}
+.mock-table .model-name{font-weight:700;color:var(--bright);}
+.pos{color:var(--green);font-weight:600;}
+.neg{color:var(--red);font-weight:600;}
+.mock-table tr.best{background:#34d39908;}
+.oos-badge{display:inline-block;background:#34d39920;color:var(--green);font-size:11px;font-weight:700;padding:3px 10px;border-radius:6px;margin-left:8px;}
+
+/* market bars */
+.market-row{display:flex;gap:36px;align-items:flex-end;height:200px;margin-top:28px;justify-content:center;}
+.mbar{display:flex;flex-direction:column;align-items:center;gap:6px;}
+.mbar .bar{width:90px;border-radius:10px 10px 0 0;}
+.mbar .val{font-size:18px;font-weight:800;color:var(--bright);}
+.mbar .lbl{font-size:11px;color:var(--dim);text-align:center;max-width:90px;}
+
+/* competitor row */
+.comp-row{display:flex;gap:16px;margin-top:32px;max-width:900px;width:100%;}
+.comp-card{flex:1;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px;text-align:center;}
+.comp-card.us{border-color:var(--green);background:#34d39908;}
+.comp-card .name{font-size:15px;font-weight:700;color:var(--bright);margin-bottom:4px;}
+.comp-card .diff{font-size:12px;color:var(--dim);}
+.comp-card.us .diff{color:var(--green);}
+
+/* pricing */
+.price-row{display:flex;gap:20px;margin-top:28px;max-width:800px;}
+.price-card{flex:1;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:24px;text-align:center;position:relative;}
+.price-card.feat{border-color:var(--blue);}
+.price-card.feat::before{content:'POPULAR';position:absolute;top:10px;right:-24px;background:var(--blue);color:#fff;font-size:9px;font-weight:800;padding:2px 28px;transform:rotate(45deg);}
+.price-card .tier{font-size:12px;color:var(--dim);font-weight:600;letter-spacing:1px;text-transform:uppercase;}
+.price-card .amt{font-size:32px;font-weight:900;color:var(--bright);margin:6px 0;}
+.price-card .amt span{font-size:14px;font-weight:400;color:var(--dim);}
+.price-card ul{list-style:none;text-align:left;margin-top:12px;}
+.price-card li{font-size:12px;color:var(--dim);padding:3px 0;}
+.price-card li::before{content:'\2713 ';color:var(--green);font-weight:700;}
+
+/* roadmap */
+.road{display:flex;gap:0;width:100%;max-width:800px;margin-top:24px;}
+.road-item{flex:1;text-align:center;position:relative;padding-top:32px;}
+.road-item::before{content:'';position:absolute;top:10px;left:0;right:0;height:2px;background:var(--border);}
+.road-item:first-child::before{left:50%;}
+.road-item:last-child::before{right:50%;}
+.road-dot{width:10px;height:10px;border-radius:50%;position:absolute;top:6px;left:50%;transform:translateX(-50%);z-index:1;}
+.road-dot.done{background:var(--green);}
+.road-dot.now{background:var(--orange);box-shadow:0 0 10px var(--orange);}
+.road-dot.future{background:var(--border);}
+.road-item h4{font-size:13px;font-weight:700;color:var(--bright);margin-bottom:2px;}
+.road-item p{font-size:11px;color:var(--dim);line-height:1.3;}
+
+/* final */
+.final-lines{text-align:center;margin-top:32px;}
+.final-line{font-size:36px;font-weight:800;color:var(--bright);line-height:1.5;}
+.final-url{font-size:24px;color:var(--blue);font-weight:700;margin-top:24px;}
+.final-sub{font-size:15px;color:var(--dim);margin-top:8px;}
+
+/* teleprompter */
+.tp{position:fixed;top:20px;right:28px;z-index:300;max-width:320px;background:rgba(0,0,0,.85);border:1px solid #333;border-radius:10px;padding:14px 16px;font-size:13px;color:#aaa;line-height:1.5;display:none;backdrop-filter:blur(10px);}
+.tp .tp-label{font-size:10px;color:#666;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;}
+body.show-tp .tp{display:block;}
+
+@media(max-width:768px){
+  .slide{padding:40px 20px;}
+  .slide h1{font-size:32px;}
+  .slide h2{font-size:28px;}
+  .pain-row,.comp-row,.price-row{flex-direction:column;}
+  .vs-box{flex-direction:column;gap:16px;}
+  .ring-demo{flex-direction:column;}
+}
+</style>
+</head>
+<body>
+
+<div class="pbar" id="pbar"></div>
+<div class="wm">AlphaScout</div>
+<div class="cnt" id="cnt"></div>
+<div class="hint">方向键 / 空格键翻页 &middot; 按 T 键显示提词器</div>
+
+<div class="deck" id="deck">
+
+<!-- ========== SLIDE 1: HOOK — THE PAIN ========== -->
+<div class="slide active">
+  <div class="glow" style="width:600px;height:600px;background:var(--red);top:-200px;right:-100px;"></div>
+  <span class="tag tag-red a-up">痛点</span>
+  <h1 class="a-up-d1">你想用 AI 炒股。<br>这是你的选择。</h1>
+  <div class="pain-row">
+    <div class="pain-card a-scale-d1">
+      <div class="icon">&#128187;</div>
+      <h3>Bloomberg</h3>
+      <p>图表和数据，没有 ML 模型</p>
+      <div class="price">$24,000/年</div>
+    </div>
+    <div class="pain-card a-scale-d2">
+      <div class="icon">&#128433;</div>
+      <h3>QuantConnect</h3>
+      <p>很强大，但你得自己写 Python</p>
+      <div class="price">需要编程</div>
+    </div>
+    <div class="pain-card a-scale-d3">
+      <div class="icon">&#128200;</div>
+      <h3>TradingView</h3>
+      <p>传统指标，没有机器学习</p>
+      <div class="price">没有 ML</div>
+    </div>
+  </div>
+  <div class="tp">
+    <div class="tp-label">台词 0:00–0:20</div>
+    "你想用 AI 炒股。于是你去搜了一下，发现只有三个选择。<br><br>
+    Bloomberg——每年两万四千美元。QuantConnect——你得自己写 Python。TradingView——完全没有机器学习。<br><br>
+    如果我告诉你，有一个更好的方式呢？"
+  </div>
+</div>
+
+<!-- ========== SLIDE 2: THE INSIGHT ========== -->
+<div class="slide">
+  <div class="glow" style="width:500px;height:500px;background:var(--purple);top:-150px;left:-100px;"></div>
+  <span class="tag tag-purple a-up">核心洞察</span>
+  <h2 class="a-up-d1">不同的股票需要<em>不同的 AI 模型</em></h2>
+  <p class="a-up-d2" style="text-align:center;max-width:600px;">Transformer 在 NVDA 上表现出色，但在 MSFT 上可能完全失败。唯一的方法就是<strong style="color:var(--bright)">全部测试一遍</strong>。</p>
+  <div class="vs-box">
+    <div class="vs-stock a-left">
+      <div class="ticker">AAPL</div>
+      <div style="font-size:13px;color:var(--dim);margin:8px 0;">最佳模型：</div>
+      <div class="model">GRU +12.4%</div>
+    </div>
+    <div class="vs-x a-fade-d1">&ne;</div>
+    <div class="vs-stock a-left-d1">
+      <div class="ticker">TSLA</div>
+      <div style="font-size:13px;color:var(--dim);margin:8px 0;">最佳模型：</div>
+      <div class="model">Transformer +18.7%</div>
+    </div>
+    <div class="vs-x a-fade-d2">&ne;</div>
+    <div class="vs-stock a-left-d2">
+      <div class="ticker">NVDA</div>
+      <div style="font-size:13px;color:var(--dim);margin:8px 0;">最佳模型：</div>
+      <div class="model">LightGBM +24.3%</div>
+    </div>
+  </div>
+  <div class="big-eq a-up-d4">22 个模型 &times; 1 只股票 = <em>最佳策略</em></div>
+  <div class="tp">
+    <div class="tp-label">台词 0:20–0:50</div>
+    "有一件大多数人不知道的事：不同的股票需要不同的 AI 模型。<br><br>
+    苹果的走势跟特斯拉完全不一样。Transformer 在 NVDA 上表现惊人，但在 MSFT 上可能完全失败。<br><br>
+    这就是 AlphaScout 做的事。你输入一个股票代码，我们训练二十二个机器学习模型，最好的那个胜出。你只需要得到一个简单的答案：买、卖、还是持有。"
+  </div>
+</div>
+
+<!-- ========== SLIDE 3: ALPHASCORES + DEMO PLACEHOLDER ========== -->
+<div class="slide">
+  <div class="glow" style="width:500px;height:500px;background:var(--green);bottom:-200px;right:-100px;"></div>
+  <span class="tag tag-green a-up">现场演示</span>
+  <h2 class="a-up-d1">一只股票，一个评分，一个答案</h2>
+  <div class="ring-demo">
+    <div class="ring-wrap a-scale-d1">
+      <div class="ring-ticker">AAPL</div>
+      <div class="ring"><svg viewBox="0 0 100 100"><circle class="bg" cx="50" cy="50" r="42"/><circle class="fg" cx="50" cy="50" r="42" style="--target:53;stroke:var(--green);stroke-dashoffset:264;"/></svg><div class="num">8</div></div>
+      <div class="ring-label" style="color:var(--green);">看涨</div>
+    </div>
+    <div class="ring-wrap a-scale-d2">
+      <div class="ring-ticker">TSLA</div>
+      <div class="ring"><svg viewBox="0 0 100 100"><circle class="bg" cx="50" cy="50" r="42"/><circle class="fg" cx="50" cy="50" r="42" style="--target:79;stroke:var(--green);stroke-dashoffset:264;"/></svg><div class="num">7</div></div>
+      <div class="ring-label" style="color:var(--green);">看涨</div>
+    </div>
+    <div class="ring-wrap a-scale-d3">
+      <div class="ring-ticker">NVDA</div>
+      <div class="ring"><svg viewBox="0 0 100 100"><circle class="bg" cx="50" cy="50" r="42"/><circle class="fg" cx="50" cy="50" r="42" style="--target:26;stroke:var(--green);stroke-dashoffset:264;"/></svg><div class="num">9</div></div>
+      <div class="ring-label" style="color:var(--green);">强烈买入</div>
+    </div>
+  </div>
+  <div class="demo-box a-up-d3">
+    <div class="demo-label">
+      <div class="main">&#9654; 在此插入屏幕录制</div>
+      <div class="url">alphascout.bjjwwangs.win</div>
+      <div class="note">录制：输入 AAPL &rarr; AlphaScore 动画 &rarr; 点击"查看完整分析" &rarr; 展示结果表格</div>
+    </div>
+  </div>
+  <div class="tp">
+    <div class="tp-label">台词 0:50–1:20</div>
+    "让我来演示一下。这是实时的。<br><br>
+    我输入 'AAPL'，点击'获取 AlphaScore'。出来了。<br><br>
+    这个评分来自二十二个模型，它们全部用苹果的真实市场数据进行了训练。"
+  </div>
+</div>
+
+<!-- ========== SLIDE 4: PROOF — THE RESULTS TABLE ========== -->
+<div class="slide">
+  <span class="tag tag-blue a-up">样本外验证</span>
+  <h2 class="a-up-d1">每一个数字都来自 AI <em>从未见过的数据</em></h2>
+  <p class="a-up-d2" style="text-align:center;font-size:15px;color:var(--dim);">训练 6 个月 &rarr; 验证 1 个月 &rarr; 测试 1 个月（盲测） <span class="oos-badge">样本外</span></p>
+  <table class="mock-table a-up-d2">
+    <thead><tr><th class="rank">#</th><th>模型</th><th>模型收益</th><th>持有收益</th><th>超额收益</th><th>胜率</th></tr></thead>
+    <tbody>
+      <tr class="best"><td class="rank">1</td><td class="model-name">GRU</td><td class="pos">+12.4%</td><td>+6.2%</td><td class="pos">+6.2%</td><td>58.3%</td></tr>
+      <tr><td class="rank">2</td><td class="model-name">ALSTM</td><td class="pos">+10.1%</td><td>+6.2%</td><td class="pos">+3.9%</td><td>55.1%</td></tr>
+      <tr><td class="rank">3</td><td class="model-name">LightGBM</td><td class="pos">+9.8%</td><td>+6.2%</td><td class="pos">+3.6%</td><td>54.7%</td></tr>
+      <tr><td class="rank">4</td><td class="model-name">Transformer</td><td class="pos">+7.3%</td><td>+6.2%</td><td class="pos">+1.1%</td><td>52.4%</td></tr>
+      <tr><td class="rank">5</td><td class="model-name">XGBoost</td><td class="pos">+5.9%</td><td>+6.2%</td><td class="neg">-0.3%</td><td>51.2%</td></tr>
+      <tr style="opacity:.4"><td class="rank">...</td><td>还有 17+ 个模型</td><td></td><td></td><td></td><td></td></tr>
+    </tbody>
+  </table>
+  <p class="a-up-d3" style="text-align:center;font-size:14px;color:var(--dim);margin-top:16px;">
+    <strong style="color:var(--bright)">关键：</strong>
+    <em>超额收益</em> = 模型跑赢（或跑输）简单持有的幅度。正值 = 真正的 Alpha。
+  </p>
+  <div class="tp">
+    <div class="tp-label">台词 1:20–1:45</div>
+    "这是所有模型的排名。GRU 的回报是正 12%，但苹果同期只涨了 6%。所以 GRU 跑赢了买入持有策略六个百分点。这就是真正的 Alpha。<br><br>
+    而且最关键的一点——这些都是样本外的结果。模型从来没有见过这段测试数据。这不是过拟合，这是真正的预测能力。<br><br>
+    不过完整扫描需要时间。所以我们做了快速预测——点这里，输入任意股票代码，预训练模型秒出信号。买、卖、还是持有——几秒钟搞定。"
+  </div>
+</div>
+
+<!-- ========== SLIDE 5: MARKET + COMPETITION ========== -->
+<div class="slide">
+  <span class="tag tag-orange a-up">市场机会</span>
+  <h2 class="a-up-d1">1.5 亿新交易者，自动扫描竞品为<em>零</em></h2>
+  <div class="market-row">
+    <div class="mbar a-count">
+      <div class="val">$12B</div>
+      <div class="bar" style="height:180px;background:var(--grad);"></div>
+      <div class="lbl">散户交易工具 (TAM)</div>
+    </div>
+    <div class="mbar a-count-d1">
+      <div class="val">$3.2B</div>
+      <div class="bar" style="height:100px;background:linear-gradient(135deg,var(--purple),var(--blue));"></div>
+      <div class="lbl">AI 驱动交易 (SAM)</div>
+    </div>
+    <div class="mbar a-count-d2">
+      <div class="val">$180M</div>
+      <div class="bar" style="height:40px;background:linear-gradient(135deg,var(--orange),var(--red));"></div>
+      <div class="lbl">自动 ML 信号 (SOM)</div>
+    </div>
+  </div>
+  <div class="comp-row a-up-d3">
+    <div class="comp-card">
+      <div class="name">TradingView</div>
+      <div class="diff">只有传统指标，没有 ML</div>
+    </div>
+    <div class="comp-card">
+      <div class="name">Danelfin</div>
+      <div class="diff">有 AI 评分，但只用 1 个模型</div>
+    </div>
+    <div class="comp-card">
+      <div class="name">QuantConnect</div>
+      <div class="diff">很强大，但需要编程</div>
+    </div>
+    <div class="comp-card us">
+      <div class="name" style="color:var(--green);">AlphaScout</div>
+      <div class="diff">22 个模型竞争。无需编程。免费。</div>
+    </div>
+  </div>
+  <div class="tp">
+    <div class="tp-label">台词 1:45–2:10</div>
+    "从 2020 年以来，全球有超过一亿五千万的新用户开始炒股。这个市场规模是一百二十亿美元。<br><br>
+    而自动多模型对比？没有人在做。Danelfin 有 AI 评分但只用一个模型。我们训练二十二个模型，让它们互相竞争。"
+  </div>
+</div>
+
+<!-- ========== SLIDE 6: BUSINESS MODEL ========== -->
+<div class="slide">
+  <span class="tag tag-green a-up">商业模式</span>
+  <h2 class="a-up-d1"><em>会员 + 积分</em>制 —— 用多少付多少</h2>
+  <p class="a-up-d1" style="text-align:center;font-size:13px;color:var(--dim);margin-bottom:18px;">1 次快速预测 = 1 积分 &nbsp;|&nbsp; 1 次完整扫描 = 5 积分</p>
+  <div class="price-row">
+    <div class="price-card a-scale-d1">
+      <div class="tier">免费版</div>
+      <div class="amt">$0</div>
+      <ul><li>每月 3 积分</li><li>仅限快速预测</li><li>收盘后信号</li></ul>
+    </div>
+    <div class="price-card feat a-scale-d2">
+      <div class="tier">专业版</div>
+      <div class="amt">$19<span>/月</span></div>
+      <ul><li>每月 50 积分</li><li>全部 22 个模型</li><li>完整扫描 + 快速预测</li><li>AlphaScore 提醒</li></ul>
+    </div>
+    <div class="price-card a-scale-d3">
+      <div class="tier">高级版</div>
+      <div class="amt">$49<span>/月</span></div>
+      <ul><li>每月 200 积分</li><li>API 接入</li><li>GPU 优先队列</li><li>Webhook 提醒</li></ul>
+    </div>
+  </div>
+  <div class="road a-up-d4">
+    <div class="road-item"><div class="road-dot done"></div><h4>2026 Q1</h4><p>网页版上线<br>22 个模型</p></div>
+    <div class="road-item"><div class="road-dot now"></div><h4>2026 Q2</h4><p>移动应用<br>推送通知</p></div>
+    <div class="road-item"><div class="road-dot future"></div><h4>2026 Q3</h4><p>券商对接</p></div>
+    <div class="road-item"><div class="road-dot future"></div><h4>2026 Q4</h4><p>API 市场<br>加密货币</p></div>
+  </div>
+  <div class="tp">
+    <div class="tp-label">台词 2:10–2:35</div>
+    "目前 AlphaScout 完全免费——我用自己的 GPU 服务器运行，大家可以零成本体验。<br><br>
+    基于微软 Qlib 构建，运行在 NVIDIA RTX PRO 6000 GPU 上。<br><br>
+    规模化之后会上云端 GPU 集群，采用会员加积分制。免费用户每月有少量积分，会员按月付费获得积分额度——每次扫描消耗积分，因为每跑一次模型都在烧真实的 GPU 算力。"
+  </div>
+</div>
+
+<!-- ========== SLIDE 7: CLOSE ========== -->
+<div class="slide">
+  <div class="glow" style="width:700px;height:700px;background:var(--blue);top:-250px;left:-200px;"></div>
+  <div class="glow" style="width:400px;height:400px;background:var(--green);bottom:-150px;right:-100px;"></div>
+  <div class="final-lines">
+    <div class="final-line a-up">22 个 AI 模型。</div>
+    <div class="final-line a-up-d1">600+ 只美股。</div>
+    <div class="final-line a-up-d2"><em>一个答案。</em></div>
+  </div>
+  <div class="final-url a-up-d3">alphascout.bjjwwangs.win</div>
+  <div class="final-sub a-up-d4">输入任意股票。获取你的 AlphaScore。买、卖、还是持有。</div>
+  <div style="margin-top:32px;" class="a-up-d5">
+    <div style="font-size:14px;color:var(--dim);">谢谢。</div>
+  </div>
+  <div class="tp">
+    <div class="tp-label">台词 2:35–3:00</div>
+    "最后说一个数据：95% 的散户在亏钱。不是因为他们笨——而是因为他们没有合适的工具。我们做了这个工具。<br><br>
+    二十多个 AI 模型。五千多只股票。一个清晰的答案。<br><br>
+    现在就来试试。alphascout.bjjwwangs.win。输入任意股票，获取你的 AlphaScore。<br><br>
+    谢谢。"
+  </div>
+</div>
+
+</div><!-- /deck -->
+
+<script>
+const slides = document.querySelectorAll('.slide');
+const pbar = document.getElementById('pbar');
+const cnt = document.getElementById('cnt');
+let cur = 0;
+
+function show(n) {
+  if (n < 0 || n >= slides.length) return;
+  slides[cur].classList.remove('active');
+  cur = n;
+  slides[cur].classList.add('active');
+  pbar.style.width = ((cur + 1) / slides.length * 100) + '%';
+  cnt.textContent = (cur + 1) + ' / ' + slides.length;
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'ArrowDown') { e.preventDefault(); show(cur + 1); }
+  else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); show(cur - 1); }
+  else if (e.key === 'Home') { e.preventDefault(); show(0); }
+  else if (e.key === 'End') { e.preventDefault(); show(slides.length - 1); }
+  else if (e.key === 't' || e.key === 'T') { document.body.classList.toggle('show-tp'); }
+});
+
+let tx = 0;
+document.addEventListener('touchstart', e => { tx = e.changedTouches[0].screenX; });
+document.addEventListener('touchend', e => { const d = e.changedTouches[0].screenX - tx; if (d < -50) show(cur + 1); else if (d > 50) show(cur - 1); });
+document.addEventListener('click', e => { if (e.target.tagName === 'A') return; if (e.clientX > window.innerWidth / 2) show(cur + 1); else show(cur - 1); });
+
+show(0);
+</script>
+</body>
+</html>

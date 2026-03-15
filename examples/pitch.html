@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AlphaScout — Pitch Deck</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+  :root {
+    --bg: #0a0e17; --card: #131a2b; --border: #1e2d45;
+    --text: #c4d3e8; --dim: #6b7f99; --bright: #eaf0f8; --white: #ffffff;
+    --blue: #4d9fff; --green: #34d399; --orange: #f59e0b;
+    --red: #ef4444; --purple: #a78bfa; --cyan: #22d3ee;
+    --grad: linear-gradient(135deg, #4d9fff, #34d399);
+    --grad-warm: linear-gradient(135deg, #f59e0b, #ef4444);
+    --grad-purple: linear-gradient(135deg, #a78bfa, #4d9fff);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: var(--bg); color: var(--text);
+    overflow: hidden; width: 100vw; height: 100vh;
+  }
+
+  /* SLIDE CONTAINER */
+  .deck { width: 100vw; height: 100vh; position: relative; }
+  .slide {
+    position: absolute; inset: 0; display: flex; flex-direction: column;
+    justify-content: center; align-items: center; padding: 60px 80px;
+    opacity: 0; pointer-events: none; transition: opacity 0.5s ease;
+  }
+  .slide.active { opacity: 1; pointer-events: all; }
+
+  /* PROGRESS BAR */
+  .progress {
+    position: fixed; top: 0; left: 0; height: 3px; background: var(--grad);
+    transition: width 0.4s ease; z-index: 200;
+  }
+
+  /* SLIDE COUNTER */
+  .counter {
+    position: fixed; bottom: 24px; right: 32px; font-size: 13px;
+    color: var(--dim); font-weight: 500; z-index: 200;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* NAV HINT */
+  .nav-hint {
+    position: fixed; bottom: 24px; left: 32px; font-size: 12px;
+    color: var(--dim); z-index: 200; opacity: 0.5;
+  }
+
+  /* BRAND WATERMARK */
+  .watermark {
+    position: fixed; top: 24px; left: 32px; font-size: 14px;
+    font-weight: 700; background: var(--grad); -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent; z-index: 200;
+  }
+
+  /* TYPOGRAPHY */
+  .slide h1 {
+    font-size: 64px; font-weight: 800; color: var(--bright); line-height: 1.1;
+    text-align: center; max-width: 900px;
+  }
+  .slide h2 {
+    font-size: 44px; font-weight: 700; color: var(--bright); line-height: 1.2;
+    margin-bottom: 24px;
+  }
+  .slide h3 {
+    font-size: 28px; font-weight: 600; color: var(--bright); line-height: 1.3;
+    margin-bottom: 12px;
+  }
+  .slide p {
+    font-size: 20px; color: var(--text); line-height: 1.6; max-width: 700px;
+  }
+  .slide .subtitle {
+    font-size: 22px; color: var(--dim); margin-top: 16px; font-weight: 400;
+  }
+  .slide .highlight { background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .slide .highlight-warm { background: var(--grad-warm); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .slide .highlight-purple { background: var(--grad-purple); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+  .slide .tag {
+    display: inline-block; font-size: 13px; font-weight: 600; padding: 6px 16px;
+    border-radius: 100px; margin-bottom: 20px;
+    text-transform: uppercase; letter-spacing: 1.5px;
+  }
+  .tag-blue { background: #4d9fff18; color: var(--blue); border: 1px solid #4d9fff33; }
+  .tag-green { background: #34d39918; color: var(--green); border: 1px solid #34d39933; }
+  .tag-orange { background: #f59e0b18; color: var(--orange); border: 1px solid #f59e0b33; }
+  .tag-red { background: #ef444418; color: var(--red); border: 1px solid #ef444433; }
+  .tag-purple { background: #a78bfa18; color: var(--purple); border: 1px solid #a78bfa33; }
+
+  /* LAYOUTS */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; width: 100%; max-width: 1100px; align-items: center; }
+  .three-col { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; width: 100%; max-width: 1100px; }
+  .four-col { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; width: 100%; max-width: 1100px; }
+
+  .card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+    padding: 32px; text-align: left;
+  }
+  .card h3 { font-size: 20px; margin-bottom: 8px; }
+  .card p { font-size: 15px; color: var(--dim); max-width: none; }
+  .card .icon { font-size: 36px; margin-bottom: 16px; display: block; }
+
+  .stat-row {
+    display: flex; gap: 48px; margin-top: 40px; justify-content: center; flex-wrap: wrap;
+  }
+  .stat { text-align: center; }
+  .stat .num {
+    font-size: 48px; font-weight: 800; background: var(--grad);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .stat .label { font-size: 14px; color: var(--dim); margin-top: 4px; }
+
+  /* COMPARISON TABLE */
+  .comp-table {
+    width: 100%; max-width: 900px; border-collapse: collapse;
+    background: var(--card); border-radius: 16px; overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .comp-table th {
+    padding: 16px 24px; text-align: left; font-size: 14px;
+    font-weight: 600; color: var(--dim); background: #0d1220;
+    border-bottom: 1px solid var(--border);
+  }
+  .comp-table td {
+    padding: 14px 24px; font-size: 15px; border-bottom: 1px solid var(--border);
+  }
+  .comp-table tr:last-child td { border: none; }
+  .comp-table .us-col { background: #4d9fff08; }
+  .comp-table .us-head { background: #4d9fff12; color: var(--blue); font-weight: 700; }
+  .yes { color: var(--green); font-weight: 600; }
+  .no { color: var(--red); opacity: 0.4; }
+  .partial { color: var(--orange); }
+
+  /* TIMELINE */
+  .timeline {
+    display: flex; gap: 0; width: 100%; max-width: 1000px; align-items: flex-start;
+    margin-top: 32px;
+  }
+  .tl-item {
+    flex: 1; text-align: center; position: relative; padding-top: 40px;
+  }
+  .tl-item::before {
+    content: ''; position: absolute; top: 14px; left: 0; right: 0;
+    height: 2px; background: var(--border);
+  }
+  .tl-item:first-child::before { left: 50%; }
+  .tl-item:last-child::before { right: 50%; }
+  .tl-dot {
+    width: 12px; height: 12px; border-radius: 50%; background: var(--blue);
+    position: absolute; top: 9px; left: 50%; transform: translateX(-50%);
+    z-index: 1;
+  }
+  .tl-dot.done { background: var(--green); }
+  .tl-dot.now { background: var(--orange); box-shadow: 0 0 12px var(--orange); width: 16px; height: 16px; top: 7px; }
+  .tl-item h4 { font-size: 15px; font-weight: 600; color: var(--bright); margin-bottom: 4px; }
+  .tl-item p { font-size: 13px; color: var(--dim); line-height: 1.4; }
+
+  /* MODEL GRID */
+  .model-grid {
+    display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px;
+    width: 100%; max-width: 700px; margin-top: 24px;
+  }
+  .m-chip {
+    background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px; font-size: 12px; font-weight: 500; text-align: center; color: var(--text);
+  }
+  .m-chip.gpu { border-color: #a78bfa44; }
+  .m-chip.tree { border-color: #34d39944; }
+
+  /* ARCHITECTURE */
+  .arch-flow {
+    display: flex; align-items: center; gap: 16px; margin-top: 32px;
+    flex-wrap: wrap; justify-content: center;
+  }
+  .arch-box {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 16px 24px; text-align: center; min-width: 140px;
+  }
+  .arch-box h4 { font-size: 14px; font-weight: 600; color: var(--bright); }
+  .arch-box p { font-size: 12px; color: var(--dim); }
+  .arch-arrow { color: var(--blue); font-size: 24px; font-weight: 300; }
+
+  /* REVENUE */
+  .rev-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;
+    width: 100%; max-width: 900px; margin-top: 32px;
+  }
+  .rev-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+    padding: 28px; text-align: center; position: relative; overflow: hidden;
+  }
+  .rev-card.featured { border-color: var(--blue); }
+  .rev-card.featured::before {
+    content: 'MOST POPULAR'; position: absolute; top: 12px; right: -28px;
+    background: var(--blue); color: #fff; font-size: 10px; font-weight: 700;
+    padding: 2px 32px; transform: rotate(45deg); letter-spacing: 0.5px;
+  }
+  .rev-card .tier { font-size: 13px; font-weight: 600; color: var(--dim); text-transform: uppercase; letter-spacing: 1px; }
+  .rev-card .price { font-size: 36px; font-weight: 800; color: var(--bright); margin: 8px 0; }
+  .rev-card .price span { font-size: 16px; font-weight: 400; color: var(--dim); }
+  .rev-card ul { list-style: none; text-align: left; margin-top: 16px; }
+  .rev-card li { font-size: 14px; color: var(--dim); padding: 6px 0; }
+  .rev-card li::before { content: '\2713 '; color: var(--green); font-weight: 700; margin-right: 6px; }
+
+  /* DEMO PLACEHOLDER */
+  .demo-frame {
+    width: 100%; max-width: 950px; aspect-ratio: 16/9;
+    background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+    display: flex; align-items: center; justify-content: center;
+    margin-top: 24px; position: relative; overflow: hidden;
+  }
+  .demo-frame::before {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(135deg, #4d9fff06, #34d39906);
+  }
+  .demo-label {
+    font-size: 18px; color: var(--dim); font-weight: 500; z-index: 1;
+  }
+  .demo-label a {
+    color: var(--blue); text-decoration: underline; font-weight: 600;
+  }
+
+  /* GLOW EFFECTS */
+  .glow {
+    position: absolute; border-radius: 50%; pointer-events: none; filter: blur(100px); opacity: 0.1;
+  }
+  .glow-blue { background: var(--blue); }
+  .glow-green { background: var(--green); }
+  .glow-purple { background: var(--purple); }
+
+  /* FULL-WIDTH SLIDE */
+  .slide-full { padding: 60px 60px; }
+
+  /* TEAM */
+  .team-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+    padding: 32px; text-align: center; max-width: 400px;
+  }
+  .team-avatar {
+    width: 80px; height: 80px; border-radius: 50%; background: var(--grad);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 32px; font-weight: 700; color: #fff; margin: 0 auto 16px;
+  }
+  .team-card .name { font-size: 20px; font-weight: 700; color: var(--bright); }
+  .team-card .role { font-size: 14px; color: var(--blue); font-weight: 500; margin: 4px 0 12px; }
+  .team-card .bio { font-size: 14px; color: var(--dim); line-height: 1.5; }
+
+  /* MARKET SIZE */
+  .market-bars {
+    display: flex; align-items: flex-end; gap: 32px; height: 200px;
+    margin-top: 32px; justify-content: center;
+  }
+  .market-bar {
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+  }
+  .market-bar .bar {
+    width: 80px; border-radius: 8px 8px 0 0;
+    background: var(--grad); position: relative;
+  }
+  .market-bar .val {
+    font-size: 16px; font-weight: 700; color: var(--bright);
+  }
+  .market-bar .lbl {
+    font-size: 12px; color: var(--dim); text-align: center; max-width: 100px;
+  }
+</style>
+</head>
+<body>
+
+<div class="progress" id="progress"></div>
+<div class="watermark">AlphaScout</div>
+<div class="counter" id="counter"></div>
+<div class="nav-hint">Arrow keys / Space to navigate</div>
+
+<div class="deck" id="deck">
+
+<!-- ====== SLIDE 1: TITLE ====== -->
+<div class="slide active">
+  <div class="glow glow-blue" style="width:600px;height:600px;top:-200px;right:-100px;"></div>
+  <div class="glow glow-green" style="width:400px;height:400px;bottom:-100px;left:-50px;"></div>
+  <span class="tag tag-green">UNSW Founders 2026</span>
+  <h1>Find the <span class="highlight">best AI model</span> for any stock — in one click</h1>
+  <p class="subtitle" style="text-align:center;">AlphaScout scans 22 machine learning models against any stock and tells you: buy, sell, or hold.</p>
+  <div class="stat-row" style="margin-top:48px;">
+    <div class="stat"><div class="num">22</div><div class="label">ML Models</div></div>
+    <div class="stat"><div class="num">5,094</div><div class="label">Stocks</div></div>
+    <div class="stat"><div class="num">GPU</div><div class="label">Accelerated</div></div>
+    <div class="stat"><div class="num">Live</div><div class="label">Product</div></div>
+  </div>
+</div>
+
+<!-- ====== SLIDE 2: THE PROBLEM ====== -->
+<div class="slide">
+  <span class="tag tag-red">The Problem</span>
+  <h2>AI trading tools are <span class="highlight-warm">broken</span> for retail investors</h2>
+  <p style="text-align:center; margin-bottom:40px;">
+    95% of retail traders lose money. Not because AI doesn't work — but because they can't access it.
+  </p>
+  <div class="three-col">
+    <div class="card">
+      <span class="icon">&#128176;</span>
+      <h3>Bloomberg Terminal</h3>
+      <p>$24,000/year. Built for Wall Street institutions. No ML model comparison. No buy/sell signals.</p>
+    </div>
+    <div class="card">
+      <span class="icon">&#128187;</span>
+      <h3>QuantConnect</h3>
+      <p>Requires Python fluency. Days of setup. You write the strategy yourself — the platform just runs it.</p>
+    </div>
+    <div class="card">
+      <span class="icon">&#128200;</span>
+      <h3>TradingView</h3>
+      <p>Rule-based indicators (RSI, MACD). No machine learning. One-size-fits-all approach can't adapt.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ====== SLIDE 3: OUR INSIGHT ====== -->
+<div class="slide">
+  <div class="glow glow-purple" style="width:500px;height:500px;top:-150px;left:-100px;"></div>
+  <span class="tag tag-purple">Our Insight</span>
+  <h2>Different stocks need <span class="highlight-purple">different AI models</span></h2>
+  <p style="text-align:center; max-width:680px;">
+    AAPL doesn't behave like TSLA. A GRU might beat a Transformer on one stock but fail on another.
+    The only way to know which model works best is to <strong style="color:var(--bright);">test them all</strong>.
+  </p>
+  <div style="margin-top:48px; text-align:center;">
+    <div style="font-size:72px; font-weight:900; color:var(--bright);">22 models &times; 1 stock</div>
+    <div style="font-size:20px; color:var(--dim); margin-top:8px;">= the optimal strategy, discovered automatically</div>
+  </div>
+</div>
+
+<!-- ====== SLIDE 4: HOW IT WORKS ====== -->
+<div class="slide">
+  <span class="tag tag-blue">How It Works</span>
+  <h2>From ticker to trade signal in <span class="highlight">3 steps</span></h2>
+  <p style="text-align:center; margin-bottom:40px;">No coding. No configuration. No PhD required.</p>
+  <div class="three-col">
+    <div class="card" style="text-align:center;">
+      <div style="width:56px;height:56px;border-radius:50%;background:var(--grad);color:#fff;font-size:24px;font-weight:800;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">1</div>
+      <h3>Enter a Stock</h3>
+      <p>Type any ticker — AAPL, TSLA, MSFT. Choose day trading or swing trading style.</p>
+    </div>
+    <div class="card" style="text-align:center;">
+      <div style="width:56px;height:56px;border-radius:50%;background:var(--grad);color:#fff;font-size:24px;font-weight:800;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">2</div>
+      <h3>AI Scans 22 Models</h3>
+      <p>LightGBM, LSTM, Transformer, GATs, and 18 more models train on YOUR stock's data. GPU-accelerated.</p>
+    </div>
+    <div class="card" style="text-align:center;">
+      <div style="width:56px;height:56px;border-radius:50%;background:var(--grad);color:#fff;font-size:24px;font-weight:800;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">3</div>
+      <h3>Get Your Signal</h3>
+      <p>The best model predicts tomorrow. You get a clear <strong style="color:var(--green);">BUY</strong>, <strong style="color:var(--red);">SELL</strong>, or HOLD signal.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ====== SLIDE 5: TECH ARCHITECTURE ====== -->
+<div class="slide">
+  <span class="tag tag-blue">Technology</span>
+  <h2>Built on <span class="highlight">Microsoft Qlib</span> + NVIDIA GPU</h2>
+  <p style="text-align:center; margin-bottom:16px;">Enterprise-grade quantitative finance, packaged for consumers.</p>
+  <div class="arch-flow">
+    <div class="arch-box">
+      <h4>Data Ingestion</h4>
+      <p>Yahoo Finance<br>Baostock<br>SQLite (5K stocks)</p>
+    </div>
+    <span class="arch-arrow">&rarr;</span>
+    <div class="arch-box">
+      <h4>Feature Engine</h4>
+      <p>Alpha158<br>Alpha360<br>158+ features</p>
+    </div>
+    <span class="arch-arrow">&rarr;</span>
+    <div class="arch-box" style="border-color:var(--purple);">
+      <h4>22 ML Models</h4>
+      <p>Trees / RNNs /<br>Transformers / GATs</p>
+    </div>
+    <span class="arch-arrow">&rarr;</span>
+    <div class="arch-box">
+      <h4>Backtest Engine</h4>
+      <p>Walk-forward<br>Out-of-sample<br>Real metrics</p>
+    </div>
+    <span class="arch-arrow">&rarr;</span>
+    <div class="arch-box" style="border-color:var(--green);">
+      <h4>Signal Output</h4>
+      <p>BUY / SELL / HOLD<br>Confidence score</p>
+    </div>
+  </div>
+  <div class="model-grid" style="margin-top:32px;">
+    <div class="m-chip tree">LightGBM</div>
+    <div class="m-chip tree">XGBoost</div>
+    <div class="m-chip tree">CatBoost</div>
+    <div class="m-chip tree">Linear</div>
+    <div class="m-chip tree">DEnsemble</div>
+    <div class="m-chip gpu">LSTM</div>
+    <div class="m-chip gpu">GRU</div>
+    <div class="m-chip gpu">ALSTM</div>
+    <div class="m-chip gpu">ADARNN</div>
+    <div class="m-chip gpu">DNN</div>
+    <div class="m-chip gpu">TabNet</div>
+    <div class="m-chip gpu">SFM</div>
+    <div class="m-chip gpu">Transformer</div>
+    <div class="m-chip gpu">LocalFormer</div>
+    <div class="m-chip gpu">GATs</div>
+    <div class="m-chip gpu">TCN</div>
+    <div class="m-chip gpu">LSTM-TS</div>
+    <div class="m-chip gpu">GRU-TS</div>
+    <div class="m-chip gpu">ALSTM-TS</div>
+    <div class="m-chip gpu">GATs-TS</div>
+    <div class="m-chip gpu">TCN-TS</div>
+    <div class="m-chip gpu">TF-TS</div>
+  </div>
+</div>
+
+<!-- ====== SLIDE 6: LIVE DEMO ====== -->
+<div class="slide">
+  <span class="tag tag-green">Live Demo</span>
+  <h2>This is a <span class="highlight">live product</span>, not a prototype</h2>
+  <p style="text-align:center;">Try it right now during this pitch.</p>
+  <div class="demo-frame">
+    <div class="demo-label">
+      <a href="/app" target="_blank">Open AlphaScout Live &rarr;</a>
+      <br><br>
+      <span style="font-size:14px;">backtest.bjjwwangs.win</span>
+    </div>
+  </div>
+  <div class="stat-row" style="margin-top:24px;">
+    <div class="stat"><div class="num" style="font-size:36px;">5,094</div><div class="label">Stocks in database</div></div>
+    <div class="stat"><div class="num" style="font-size:36px;">RTX PRO 6000</div><div class="label">GPU Accelerated</div></div>
+    <div class="stat"><div class="num" style="font-size:36px;">Real-time</div><div class="label">SSE Streaming</div></div>
+  </div>
+</div>
+
+<!-- ====== SLIDE 7: COMPETITIVE LANDSCAPE ====== -->
+<div class="slide">
+  <span class="tag tag-orange">Competitive Landscape</span>
+  <h2>We give <span class="highlight">answers</span>, not tools</h2>
+  <table class="comp-table" style="margin-top:32px;">
+    <thead>
+      <tr>
+        <th style="width:200px;">Capability</th>
+        <th>TradingView</th>
+        <th>QuantConnect</th>
+        <th>Bloomberg</th>
+        <th class="us-head">AlphaScout</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>ML-Powered Signals</td>
+        <td><span class="no">&#10007;</span></td>
+        <td><span class="partial">Manual</span></td>
+        <td><span class="no">&#10007;</span></td>
+        <td class="us-col"><span class="yes">&#10003; Auto</span></td>
+      </tr>
+      <tr>
+        <td>No Coding Required</td>
+        <td><span class="yes">&#10003;</span></td>
+        <td><span class="no">&#10007;</span></td>
+        <td><span class="yes">&#10003;</span></td>
+        <td class="us-col"><span class="yes">&#10003;</span></td>
+      </tr>
+      <tr>
+        <td>Multi-Model Comparison</td>
+        <td><span class="no">&#10007;</span></td>
+        <td><span class="no">&#10007;</span></td>
+        <td><span class="no">&#10007;</span></td>
+        <td class="us-col"><span class="yes">&#10003; 22 Models</span></td>
+      </tr>
+      <tr>
+        <td>Buy/Sell/Hold Output</td>
+        <td><span class="no">&#10007;</span></td>
+        <td><span class="no">&#10007;</span></td>
+        <td><span class="no">&#10007;</span></td>
+        <td class="us-col"><span class="yes">&#10003;</span></td>
+      </tr>
+      <tr>
+        <td>Backtesting Built-in</td>
+        <td><span class="partial">Limited</span></td>
+        <td><span class="yes">&#10003;</span></td>
+        <td><span class="partial">Limited</span></td>
+        <td class="us-col"><span class="yes">&#10003;</span></td>
+      </tr>
+      <tr>
+        <td>Price</td>
+        <td>$15-60/mo</td>
+        <td>$8-40/mo</td>
+        <td>$2,000/mo</td>
+        <td class="us-col" style="font-weight:700;color:var(--green);">Free (Beta)</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ====== SLIDE 8: MARKET OPPORTUNITY ====== -->
+<div class="slide">
+  <span class="tag tag-purple">Market Opportunity</span>
+  <h2>A <span class="highlight-purple">$12B</span> market waiting to be disrupted</h2>
+  <p style="text-align:center;">Retail trading tools market is growing 15% YoY. AI-native platforms barely exist.</p>
+  <div class="market-bars">
+    <div class="market-bar">
+      <div class="val">$12B</div>
+      <div class="bar" style="height:180px;"></div>
+      <div class="lbl">Retail Trading Tools (TAM)</div>
+    </div>
+    <div class="market-bar">
+      <div class="val">$3.2B</div>
+      <div class="bar" style="height:100px;background:var(--grad-purple);"></div>
+      <div class="lbl">AI-Powered Trading (SAM)</div>
+    </div>
+    <div class="market-bar">
+      <div class="val">$180M</div>
+      <div class="bar" style="height:40px;background:var(--grad-warm);"></div>
+      <div class="lbl">Auto ML Signal (SOM)</div>
+    </div>
+  </div>
+  <div class="stat-row" style="margin-top:40px;">
+    <div class="stat"><div class="num" style="font-size:32px;">150M+</div><div class="label">New retail traders since 2020</div></div>
+    <div class="stat"><div class="num" style="font-size:32px;">15%</div><div class="label">Market CAGR</div></div>
+    <div class="stat"><div class="num" style="font-size:32px;">Zero</div><div class="label">Auto-scan ML competitors</div></div>
+  </div>
+</div>
+
+<!-- ====== SLIDE 9: BUSINESS MODEL ====== -->
+<div class="slide">
+  <span class="tag tag-green">Business Model</span>
+  <h2><span class="highlight">Freemium</span> with clear upgrade path</h2>
+  <div class="rev-grid">
+    <div class="rev-card">
+      <div class="tier">Free</div>
+      <div class="price">$0</div>
+      <ul>
+        <li>3 scans per month</li>
+        <li>Top 5 models only</li>
+        <li>End-of-day signals</li>
+        <li>US stocks only</li>
+      </ul>
+    </div>
+    <div class="rev-card featured">
+      <div class="tier">Pro</div>
+      <div class="price">$29<span>/mo</span></div>
+      <ul>
+        <li>Unlimited scans</li>
+        <li>All 22 models</li>
+        <li>Real-time signals</li>
+        <li>US + China stocks</li>
+        <li>Historical scan archive</li>
+      </ul>
+    </div>
+    <div class="rev-card">
+      <div class="tier">API / Enterprise</div>
+      <div class="price">$199<span>/mo</span></div>
+      <ul>
+        <li>REST API access</li>
+        <li>Webhook alerts</li>
+        <li>Custom model config</li>
+        <li>White-label support</li>
+        <li>Priority GPU queue</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ====== SLIDE 10: TRACTION & ROADMAP ====== -->
+<div class="slide">
+  <span class="tag tag-blue">Roadmap</span>
+  <h2>Where we are and <span class="highlight">where we're going</span></h2>
+  <div class="timeline">
+    <div class="tl-item">
+      <div class="tl-dot done"></div>
+      <h4>Q4 2025</h4>
+      <p>Core engine built<br>22 models integrated<br>Single-stock backtest</p>
+    </div>
+    <div class="tl-item">
+      <div class="tl-dot done"></div>
+      <h4>Q1 2026</h4>
+      <p>Auto Scanner<br>Prediction engine<br>Live product launch</p>
+    </div>
+    <div class="tl-item">
+      <div class="tl-dot now"></div>
+      <h4>Q2 2026</h4>
+      <p>Mobile app<br>Push notifications<br>Portfolio tracker</p>
+    </div>
+    <div class="tl-item">
+      <div class="tl-dot"></div>
+      <h4>Q3 2026</h4>
+      <p>Brokerage integration<br>Paper trading<br>Social sharing</p>
+    </div>
+    <div class="tl-item">
+      <div class="tl-dot"></div>
+      <h4>Q4 2026</h4>
+      <p>API marketplace<br>Crypto support<br>Institutional tier</p>
+    </div>
+  </div>
+  <div class="stat-row" style="margin-top:48px;">
+    <div class="stat"><div class="num" style="font-size:32px;">Live</div><div class="label">Product status</div></div>
+    <div class="stat"><div class="num" style="font-size:32px;">22</div><div class="label">Models shipped</div></div>
+    <div class="stat"><div class="num" style="font-size:32px;">5,094</div><div class="label">Stocks supported</div></div>
+  </div>
+</div>
+
+<!-- ====== SLIDE 11: TEAM ====== -->
+<div class="slide">
+  <span class="tag tag-purple">Team</span>
+  <h2>Built by <span class="highlight-purple">engineers who trade</span></h2>
+  <div style="display:flex; gap:32px; margin-top:32px; justify-content:center;">
+    <div class="team-card">
+      <div class="team-avatar">JW</div>
+      <div class="name">Jiawei Wang</div>
+      <div class="role">Founder & CTO</div>
+      <div class="bio">
+        UNSW Computer Science. Full-stack engineer with deep experience in quantitative finance systems,
+        GPU-accelerated ML pipelines, and real-time data streaming architectures.
+      </div>
+    </div>
+  </div>
+  <div style="margin-top:40px; text-align:center;">
+    <p style="color:var(--dim); font-size:16px;">
+      <strong style="color:var(--bright);">Tech Stack:</strong>
+      Python &middot; FastAPI &middot; PyTorch &middot; Microsoft Qlib &middot; NVIDIA CUDA &middot; SQLite &middot; SSE
+    </p>
+  </div>
+</div>
+
+<!-- ====== SLIDE 12: ASK ====== -->
+<div class="slide">
+  <div class="glow glow-blue" style="width:800px;height:800px;top:-300px;left:-200px;"></div>
+  <div class="glow glow-green" style="width:500px;height:500px;bottom:-200px;right:-100px;"></div>
+  <span class="tag tag-green">The Ask</span>
+  <h1 style="font-size:52px;">We're raising to <span class="highlight">scale infrastructure</span> and <span class="highlight">acquire users</span></h1>
+  <div class="three-col" style="margin-top:48px; max-width:900px;">
+    <div class="card" style="text-align:center; border-color:var(--blue);">
+      <span class="icon" style="font-size:32px;">&#9889;</span>
+      <h3>GPU Scale</h3>
+      <p>Multi-GPU cluster for concurrent user scans. Sub-minute scan times.</p>
+    </div>
+    <div class="card" style="text-align:center; border-color:var(--green);">
+      <span class="icon" style="font-size:32px;">&#128241;</span>
+      <h3>Mobile App</h3>
+      <p>Push notifications for real-time buy/sell signals. iOS + Android.</p>
+    </div>
+    <div class="card" style="text-align:center; border-color:var(--purple);">
+      <span class="icon" style="font-size:32px;">&#127793;</span>
+      <h3>Growth</h3>
+      <p>User acquisition, fintech partnerships, brokerage API integrations.</p>
+    </div>
+  </div>
+  <div style="margin-top:48px; text-align:center;">
+    <p style="font-size:28px; font-weight:700; color:var(--bright);">
+      Try it live: <a href="/app" target="_blank" style="color:var(--blue); text-decoration:underline;">backtest.bjjwwangs.win</a>
+    </p>
+    <p style="color:var(--dim); font-size:16px; margin-top:8px;">
+      jiawei.wang@unsw.edu.au
+    </p>
+  </div>
+</div>
+
+</div><!-- /deck -->
+
+<script>
+const slides = document.querySelectorAll('.slide');
+const progress = document.getElementById('progress');
+const counter = document.getElementById('counter');
+let current = 0;
+
+function showSlide(n) {
+  if (n < 0 || n >= slides.length) return;
+  slides[current].classList.remove('active');
+  current = n;
+  slides[current].classList.add('active');
+  progress.style.width = ((current + 1) / slides.length * 100) + '%';
+  counter.textContent = (current + 1) + ' / ' + slides.length;
+}
+
+function next() { showSlide(current + 1); }
+function prev() { showSlide(current - 1); }
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'ArrowDown') { e.preventDefault(); next(); }
+  else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); prev(); }
+  else if (e.key === 'Home') { e.preventDefault(); showSlide(0); }
+  else if (e.key === 'End') { e.preventDefault(); showSlide(slides.length - 1); }
+});
+
+// Touch support
+let touchStartX = 0;
+document.addEventListener('touchstart', e => { touchStartX = e.changedTouches[0].screenX; });
+document.addEventListener('touchend', e => {
+  const dx = e.changedTouches[0].screenX - touchStartX;
+  if (dx < -50) next();
+  else if (dx > 50) prev();
+});
+
+// Click to advance (not on links)
+document.addEventListener('click', e => {
+  if (e.target.tagName === 'A') return;
+  if (e.clientX > window.innerWidth / 2) next();
+  else prev();
+});
+
+showSlide(0);
+</script>
+</body>
+</html>

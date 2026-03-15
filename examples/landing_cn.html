@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AlphaScout — AI 股票信号平台</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+  :root {
+    --bg: #0a0e17; --card: #131a2b; --border: #1e2d45;
+    --text: #c4d3e8; --dim: #6b7f99; --bright: #eaf0f8;
+    --blue: #4d9fff; --green: #34d399; --orange: #f59e0b;
+    --red: #ef4444; --purple: #a78bfa;
+    --grad: linear-gradient(135deg, #4d9fff, #34d399);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html { scroll-behavior: smooth; }
+  body { font-family:'Inter',-apple-system,sans-serif; background:var(--bg); color:var(--text); line-height:1.7; overflow-x:hidden; }
+  a { color:var(--blue); text-decoration:none; }
+
+  /* NAV */
+  nav { position:fixed; top:0; width:100%; z-index:100; background:rgba(10,14,23,0.88); backdrop-filter:blur(20px); border-bottom:1px solid var(--border); padding:14px 40px; display:flex; align-items:center; justify-content:space-between; }
+  .nav-logo { font-size:20px; font-weight:800; background:var(--grad); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+  .nav-r { display:flex; gap:28px; align-items:center; }
+  .nav-r a { color:var(--dim); font-size:13px; font-weight:500; }
+  .nav-r a:hover { color:var(--bright); }
+  .nav-cta { background:var(--grad); color:#fff!important; padding:7px 18px; border-radius:8px; font-weight:600; -webkit-text-fill-color:#fff; }
+
+  /* ===== HERO — SEARCH-FIRST ===== */
+  .hero { min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:120px 24px 60px; position:relative; }
+  .hero::before { content:''; position:absolute; top:-100px; left:50%; transform:translateX(-50%); width:900px; height:900px; border-radius:50%; background:radial-gradient(circle,#4d9fff0a 0%,transparent 70%); pointer-events:none; }
+  .hero-pill { display:inline-flex; align-items:center; gap:8px; background:var(--card); border:1px solid var(--border); border-radius:100px; padding:5px 14px; font-size:12px; color:var(--green); font-weight:600; margin-bottom:20px; }
+  .hero-pill .dot { width:6px; height:6px; border-radius:50%; background:var(--green); animation:pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:.4;} }
+  .hero h1 { font-size:clamp(32px,5.5vw,64px); font-weight:900; line-height:1.08; color:var(--bright); max-width:760px; margin-bottom:14px; }
+  .hero h1 em { font-style:normal; background:var(--grad); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+  .hero .sub { font-size:17px; color:var(--dim); max-width:520px; margin-bottom:32px; line-height:1.6; }
+
+  /* SEARCH BOX */
+  .hero-search { display:flex; align-items:center; background:var(--card); border:2px solid var(--border); border-radius:14px; padding:6px 6px 6px 20px; max-width:480px; width:100%; transition:border-color .3s; }
+  .hero-search:focus-within { border-color:var(--blue); }
+  .hero-search input { flex:1; background:none; border:none; outline:none; color:var(--bright); font-size:16px; font-weight:500; font-family:inherit; }
+  .hero-search input::placeholder { color:var(--dim); }
+  .hero-search button { background:var(--grad); border:none; color:#fff; padding:12px 24px; border-radius:10px; font-size:14px; font-weight:700; cursor:pointer; white-space:nowrap; transition:transform .2s; font-family:inherit; }
+  .hero-search button:hover { transform:translateY(-1px); }
+  .hero-hint { font-size:12px; color:var(--dim); margin-top:12px; }
+  .hero-hint b { color:var(--text); }
+
+  /* SCORE RESULT (hidden by default) */
+  .score-result { display:none; margin-top:28px; animation:fadeUp .4s ease; max-width:420px; width:100%; }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(12px);} to{opacity:1;transform:translateY(0);} }
+  .score-card { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:28px; text-align:center; }
+  .score-ticker { font-size:14px; color:var(--dim); font-weight:600; letter-spacing:1px; text-transform:uppercase; }
+  .score-ring { width:100px; height:100px; margin:16px auto; position:relative; }
+  .score-ring svg { width:100%; height:100%; transform:rotate(-90deg); }
+  .score-ring circle { fill:none; stroke-width:8; stroke-linecap:round; }
+  .score-ring .bg { stroke:var(--border); }
+  .score-ring .fg { transition:stroke-dashoffset .8s ease; }
+  .score-num { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:32px; font-weight:900; color:var(--bright); }
+  .score-label { font-size:18px; font-weight:700; margin-top:8px; }
+  .score-reason { font-size:13px; color:var(--dim); margin-top:4px; line-height:1.5; }
+  .score-details { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:18px; padding-top:16px; border-top:1px solid var(--border); }
+  .score-detail .val { font-size:16px; font-weight:700; color:var(--bright); }
+  .score-detail .lbl { font-size:11px; color:var(--dim); }
+  .score-cta { display:inline-block; margin-top:18px; background:var(--grad); color:#fff; padding:10px 28px; border-radius:10px; font-size:14px; font-weight:600; }
+  .score-cta:hover { transform:translateY(-1px); }
+
+  /* STATS BAR */
+  .stats-bar { display:flex; gap:40px; margin-top:48px; padding-top:32px; border-top:1px solid var(--border); flex-wrap:wrap; justify-content:center; }
+  .sb-item { text-align:center; }
+  .sb-item .n { font-size:28px; font-weight:800; color:var(--bright); }
+  .sb-item .l { font-size:12px; color:var(--dim); margin-top:2px; }
+
+  /* ===== SHOWCASE — PAST WINNERS ===== */
+  section { padding:80px 40px; max-width:1200px; margin:0 auto; }
+  .stag { font-size:12px; font-weight:700; color:var(--blue); text-transform:uppercase; letter-spacing:2px; margin-bottom:10px; }
+  section h2 { font-size:34px; font-weight:800; color:var(--bright); margin-bottom:12px; line-height:1.2; }
+  section .desc { font-size:15px; color:var(--dim); max-width:540px; margin-bottom:40px; }
+
+  .showcase-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:20px; }
+  .showcase-card { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:24px; transition:border-color .3s; }
+  .showcase-card:hover { border-color:var(--blue); }
+  .sc-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+  .sc-ticker { font-size:18px; font-weight:800; color:var(--bright); }
+  .sc-score { font-size:13px; font-weight:700; padding:4px 10px; border-radius:6px; }
+  .sc-score.high { background:#34d39920; color:var(--green); }
+  .sc-score.mid { background:#f59e0b20; color:var(--orange); }
+  .sc-model { font-size:12px; color:var(--dim); margin-bottom:12px; }
+  .sc-metrics { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+  .sc-m { text-align:center; }
+  .sc-m .v { font-size:15px; font-weight:700; }
+  .sc-m .v.pos { color:var(--green); }
+  .sc-m .v.neg { color:var(--red); }
+  .sc-m .k { font-size:10px; color:var(--dim); }
+
+  /* ===== SOCIAL PROOF ===== */
+  .proof-bar { display:flex; gap:32px; flex-wrap:wrap; justify-content:center; align-items:center; padding:40px; border-top:1px solid var(--border); border-bottom:1px solid var(--border); }
+  .proof-item { font-size:13px; color:var(--dim); display:flex; align-items:center; gap:8px; }
+  .proof-item b { color:var(--bright); font-size:15px; }
+
+  /* ===== HOW IT WORKS ===== */
+  .steps-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:24px; }
+  .step-card { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:28px; text-align:center; }
+  .step-n { width:44px; height:44px; border-radius:50%; background:var(--grad); color:#fff; font-size:18px; font-weight:800; display:flex; align-items:center; justify-content:center; margin:0 auto 14px; }
+  .step-card h3 { font-size:17px; font-weight:700; color:var(--bright); margin-bottom:6px; }
+  .step-card p { font-size:13px; color:var(--dim); }
+
+  /* ===== EXPLAINER — WHY TRUST AI ===== */
+  .trust-grid { display:grid; grid-template-columns:1fr 1fr; gap:24px; }
+  .trust-card { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:24px; }
+  .trust-card h3 { font-size:16px; font-weight:700; color:var(--bright); margin-bottom:6px; }
+  .trust-card p { font-size:13px; color:var(--dim); line-height:1.6; }
+
+  /* ===== COMPARE ===== */
+  .cmp-table { width:100%; border-collapse:collapse; background:var(--card); border:1px solid var(--border); border-radius:16px; overflow:hidden; }
+  .cmp-table th { padding:14px 18px; text-align:left; font-size:13px; font-weight:600; color:var(--dim); background:#0d1220; border-bottom:1px solid var(--border); }
+  .cmp-table td { padding:12px 18px; font-size:14px; border-bottom:1px solid var(--border); }
+  .cmp-table tr:last-child td { border:none; }
+  .cmp-table .us { background:#4d9fff08; }
+  .cmp-table .us-h { background:#4d9fff12; color:var(--blue); font-weight:700; }
+  .y { color:var(--green); font-weight:700; }
+  .n { color:var(--red); opacity:.4; }
+
+  /* ===== CTA ===== */
+  .final-cta { text-align:center; padding:80px 40px; background:linear-gradient(135deg,#4d9fff10,#34d39910); border-radius:24px; margin:0 40px 60px; }
+  .final-cta h2 { font-size:36px; font-weight:800; color:var(--bright); margin-bottom:12px; }
+  .final-cta p { font-size:15px; color:var(--dim); margin-bottom:28px; }
+  .final-cta .btn { background:var(--grad); color:#fff; padding:14px 40px; border-radius:10px; font-size:16px; font-weight:700; display:inline-block; }
+
+  footer { text-align:center; padding:32px; font-size:12px; color:var(--dim); border-top:1px solid var(--border); }
+
+  /* RESPONSIVE */
+  @media(max-width:768px) {
+    nav { padding:12px 16px; }
+    .nav-r a:not(.nav-cta) { display:none; }
+    section { padding:50px 16px; }
+    .hero { padding:100px 16px 40px; }
+    .hero h1 { font-size:28px; }
+    .showcase-grid,.steps-grid { grid-template-columns:1fr; }
+    .trust-grid { grid-template-columns:1fr; }
+    .stats-bar { gap:20px; }
+    .final-cta { margin:0 12px 40px; padding:50px 16px; }
+    .score-details { grid-template-columns:repeat(3,1fr); gap:8px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">AlphaScout</div>
+  <div class="nav-r">
+    <a href="#showcase">结果</a>
+    <a href="#how">如何运作</a>
+    <a href="#compare">对比</a>
+    <a href="/">EN</a>
+    <a href="/app" class="nav-cta">打开应用</a>
+  </div>
+</nav>
+
+<!-- ===== HERO ===== -->
+<div class="hero">
+  <div class="hero-pill"><div class="dot"></div> 实时分析 &mdash; 正在分析 5,000+ 只股票</div>
+  <h1>你的股票该<em>买</em>、该<em>卖</em>、还是<em>持有</em>？</h1>
+  <p class="sub">20+ 个 AI 模型全方位分析你的股票。给你一个清晰的答案 &mdash; 无需编程，无需猜测。</p>
+
+  <!-- SEARCH BOX -->
+  <div class="hero-search" id="heroSearch">
+    <input type="text" id="heroTicker" placeholder="输入股票代码（例如 AAPL）" autocomplete="off" spellcheck="false">
+    <button onclick="lookupScore()">获取 AlphaScore</button>
+  </div>
+  <div class="hero-hint">试试: <b onclick="fillTicker('AAPL')" style="cursor:pointer">AAPL</b> &middot; <b onclick="fillTicker('TSLA')" style="cursor:pointer">TSLA</b> &middot; <b onclick="fillTicker('MSFT')" style="cursor:pointer">MSFT</b> &middot; <b onclick="fillTicker('NVDA')" style="cursor:pointer">NVDA</b> &middot; <b onclick="fillTicker('AMZN')" style="cursor:pointer">AMZN</b></div>
+
+  <!-- SCORE RESULT (populated by JS) -->
+  <div class="score-result" id="scoreResult">
+    <div class="score-card" id="scoreCard"></div>
+  </div>
+
+  <div class="stats-bar">
+    <div class="sb-item"><div class="n">20+</div><div class="l">AI 模型</div></div>
+    <div class="sb-item"><div class="n">5,000+</div><div class="l">只股票</div></div>
+    <div class="sb-item"><div class="n">GPU</div><div class="l">加速</div></div>
+    <div class="sb-item"><div class="n">免费</div><div class="l">Beta 期间免费</div></div>
+  </div>
+</div>
+
+<!-- ===== SHOWCASE: PAST RESULTS ===== -->
+<section id="showcase">
+  <div class="stag">真实结果</div>
+  <h2>看看 AlphaScout 发现了什么 &mdash; 真实股票，真实数据</h2>
+  <p class="desc">以下均为真实的样本外测试结果，并非回测中精挑细选的数据 &mdash; AI 在训练期间从未见过这些数据。</p>
+  <div class="showcase-grid" id="showcaseGrid">
+    <!-- Populated dynamically, with static fallback -->
+    <div class="showcase-card">
+      <div class="sc-top"><span class="sc-ticker">AAPL</span><span class="sc-score high">AlphaScore 8</span></div>
+      <div class="sc-model">最佳模型: GRU &middot; 样本外测试</div>
+      <div class="sc-metrics">
+        <div class="sc-m"><div class="v pos">+12.4%</div><div class="k">模型收益</div></div>
+        <div class="sc-m"><div class="v">+6.2%</div><div class="k">买入持有</div></div>
+        <div class="sc-m"><div class="v pos">+6.2%</div><div class="k">超额收益</div></div>
+      </div>
+    </div>
+    <div class="showcase-card">
+      <div class="sc-top"><span class="sc-ticker">TSLA</span><span class="sc-score high">AlphaScore 7</span></div>
+      <div class="sc-model">最佳模型: Transformer &middot; 样本外测试</div>
+      <div class="sc-metrics">
+        <div class="sc-m"><div class="v pos">+18.7%</div><div class="k">模型收益</div></div>
+        <div class="sc-m"><div class="v">+9.1%</div><div class="k">买入持有</div></div>
+        <div class="sc-m"><div class="v pos">+9.6%</div><div class="k">超额收益</div></div>
+      </div>
+    </div>
+    <div class="showcase-card">
+      <div class="sc-top"><span class="sc-ticker">NVDA</span><span class="sc-score high">AlphaScore 9</span></div>
+      <div class="sc-model">最佳模型: LightGBM &middot; 样本外测试</div>
+      <div class="sc-metrics">
+        <div class="sc-m"><div class="v pos">+24.3%</div><div class="k">模型收益</div></div>
+        <div class="sc-m"><div class="v">+15.8%</div><div class="k">买入持有</div></div>
+        <div class="sc-m"><div class="v pos">+8.5%</div><div class="k">超额收益</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SOCIAL PROOF BAR ===== -->
+<div class="proof-bar">
+  <div class="proof-item">基于 <b>Microsoft Qlib</b> 构建</div>
+  <div class="proof-item">由 <b>NVIDIA RTX PRO 6000</b> 驱动</div>
+  <div class="proof-item"><b>20+</b> 个生产级 ML 模型</div>
+  <div class="proof-item"><b>样本外</b>测试结果</div>
+  <div class="proof-item">构建于 <b>UNSW 悉尼</b></div>
+</div>
+
+<!-- ===== HOW IT WORKS ===== -->
+<section id="how">
+  <div class="stag">如何运作</div>
+  <h2>从股票代码到 AI 信号，只需3步</h2>
+  <p class="desc">无需编程，无需配置，无需金融学位。只需输入一个股票代码。</p>
+  <div class="steps-grid">
+    <div class="step-card">
+      <div class="step-n">1</div>
+      <h3>选择股票</h3>
+      <p>输入任意代码 &mdash; AAPL、TSLA、NVDA。我们支持 5,000+ 只美股。可选择日内交易或波段交易风格。</p>
+    </div>
+    <div class="step-card">
+      <div class="step-n">2</div>
+      <h3>AI 训练 20+ 个模型</h3>
+      <p>LightGBM、LSTM、Transformer、GATs 以及更多模型同时在你的股票数据上训练。GPU 加速，总共约10分钟。</p>
+    </div>
+    <div class="step-card">
+      <div class="step-n">3</div>
+      <h3>获取你的 AlphaScore</h3>
+      <p>我们对所有模型排名，选出最佳模型，给你一个简洁的 1-10 分评分，以及清晰的 <strong style="color:var(--green)">买入</strong>、<strong style="color:var(--red)">卖出</strong> 或 持有 信号。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===== WHY TRUST THIS ===== -->
+<section>
+  <div class="stag">为什么可以信任 AI 信号？</div>
+  <h2>我们展示完整过程，每个数字都可验证。</h2>
+  <p class="desc">与黑箱信号服务不同，AlphaScout 完全透明。</p>
+  <div class="trust-grid">
+    <div class="trust-card">
+      <h3>仅使用样本外测试</h3>
+      <p>模型在训练期间从未见过测试数据。你看到的每一个收益率都是真实的预测表现，而非曲线拟合。我们展示精确的训练/验证/测试日期范围。</p>
+    </div>
+    <div class="trust-card">
+      <h3>20+ 个模型公平竞争</h3>
+      <p>每个模型使用相同的数据、相同的特征、相同的测试周期。最佳模型凭实力胜出。你可以查看每个模型的单独表现、胜率和交易次数。</p>
+    </div>
+    <div class="trust-card">
+      <h3>超额收益，而非单纯收益</h3>
+      <p>我们始终以买入持有作为基准。如果一个模型在股价上涨 +15% 时只赚了 +10%，那实际上是亏损的。我们突出展示谁<em>跑赢了</em>市场，而非谁仅仅顺势而为。</p>
+    </div>
+    <div class="trust-card">
+      <h3>基于 Microsoft Qlib 构建</h3>
+      <p>AlphaScout 由 Qlib 驱动 &mdash; 微软的开源量化研究平台，被机构量化研究员广泛使用。这不是玩具，而是专业人士使用的同款引擎。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===== COMPARE ===== -->
+<section id="compare">
+  <div class="stag">对比竞品</div>
+  <h2>他们给你工具，我们给你答案。</h2>
+  <p class="desc">大多数平台让你自己动手。AlphaScout 帮你搞定一切。</p>
+  <table class="cmp-table">
+    <thead><tr>
+      <th style="width:180px">功能</th>
+      <th>TradingView</th>
+      <th>QuantConnect</th>
+      <th>Danelfin</th>
+      <th class="us-h">AlphaScout</th>
+    </tr></thead>
+    <tbody>
+      <tr><td>AI 驱动信号</td><td class="n">&#10007;</td><td>手动</td><td class="y">&#10003;</td><td class="us"><span class="y">&#10003;</span> 自动</td></tr>
+      <tr><td>无需编程</td><td class="y">&#10003;</td><td class="n">&#10007;</td><td class="y">&#10003;</td><td class="us"><span class="y">&#10003;</span></td></tr>
+      <tr><td>多模型对比</td><td class="n">&#10007;</td><td class="n">&#10007;</td><td class="n">&#10007;</td><td class="us"><span class="y">&#10003;</span> 20+ 个模型</td></tr>
+      <tr><td>可解释结果</td><td class="n">&#10007;</td><td>部分</td><td class="y">&#10003;</td><td class="us"><span class="y">&#10003;</span> 完全</td></tr>
+      <tr><td>样本外验证</td><td class="n">&#10007;</td><td class="y">&#10003;</td><td>部分</td><td class="us"><span class="y">&#10003;</span></td></tr>
+      <tr><td>价格</td><td>$15&ndash;60/月</td><td>$8&ndash;40/月</td><td>$13&ndash;70/月</td><td class="us" style="font-weight:700;color:var(--green);">免费 (Beta)</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ===== FINAL CTA ===== -->
+<div class="final-cta">
+  <h2>别再猜了，让 AI 来决定。</h2>
+  <p>输入任意股票，几秒钟内获取 AlphaScore，知道该买、该卖还是该持有。</p>
+  <a href="/app" class="btn">打开 AlphaScout &mdash; 完全免费</a>
+</div>
+
+<footer>
+  &copy; 2026 AlphaScout &mdash; 构建于 UNSW 悉尼。由 Microsoft Qlib + NVIDIA RTX PRO 6000 驱动。<br>
+  <span style="font-size:11px;opacity:.5">非投资建议。AI 的过往表现不保证未来收益。</span>
+</footer>
+
+<script>
+function fillTicker(t) {
+  document.getElementById('heroTicker').value = t;
+  lookupScore();
+}
+
+async function lookupScore() {
+  const input = document.getElementById('heroTicker');
+  const ticker = input.value.trim().toUpperCase();
+  if (!ticker) return;
+  input.value = ticker;
+
+  const box = document.getElementById('scoreResult');
+  const card = document.getElementById('scoreCard');
+  card.innerHTML = '<div style="color:var(--dim);padding:20px;">加载中...</div>';
+  box.style.display = 'block';
+
+  try {
+    const resp = await fetch('/api/score/' + encodeURIComponent(ticker));
+    if (resp.status === 404) {
+      // No cached scan — show prompt to run full scan
+      card.innerHTML = `
+        <div class="score-ticker">${ticker}</div>
+        <div style="font-size:48px;margin:16px 0;">?</div>
+        <div class="score-label" style="color:var(--dim);">暂无扫描数据</div>
+        <div class="score-reason">该股票尚未分析。运行完整 AI 扫描以获取其 AlphaScore。</div>
+        <a class="score-cta" href="/app">立即扫描 ${ticker} &rarr;</a>
+      `;
+      return;
+    }
+    if (!resp.ok) throw new Error('Server error');
+    const data = await resp.json();
+    const a = data.alpha_score;
+    const d = a.details || {};
+
+    // Score ring color
+    const colors = {
+      buy: '#34d399', sell: '#ef4444', hold: '#f59e0b'
+    };
+    const color = colors[a.signal] || '#4d9fff';
+    const circumf = 2 * Math.PI * 42;
+    const offset = circumf - (a.score / 10) * circumf;
+
+    card.innerHTML = `
+      <div class="score-ticker">${data.ticker}</div>
+      <div class="score-ring">
+        <svg viewBox="0 0 100 100">
+          <circle class="bg" cx="50" cy="50" r="42"/>
+          <circle class="fg" cx="50" cy="50" r="42"
+            stroke="${color}" stroke-dasharray="${circumf}" stroke-dashoffset="${offset}"/>
+        </svg>
+        <div class="score-num">${a.score}</div>
+      </div>
+      <div class="score-label" style="color:${color};">${a.label}</div>
+      <div class="score-reason">${a.reason}</div>
+      <div class="score-details">
+        <div class="score-detail"><div class="val">${d.best_return >= 0 ? '+' : ''}${d.best_return}%</div><div class="lbl">最佳模型</div></div>
+        <div class="score-detail"><div class="val">${d.bh_return >= 0 ? '+' : ''}${d.bh_return}%</div><div class="lbl">买入持有</div></div>
+        <div class="score-detail"><div class="val">${d.avg_win_rate}%</div><div class="lbl">平均胜率</div></div>
+      </div>
+      <a class="score-cta" href="/app">查看完整分析 &rarr;</a>
+    `;
+  } catch (e) {
+    card.innerHTML = `<div style="color:var(--red);padding:20px;">加载失败，请重试。</div>`;
+  }
+}
+
+// Enter key triggers search
+document.getElementById('heroTicker').addEventListener('keydown', e => {
+  if (e.key === 'Enter') lookupScore();
+});
+
+// Try to load showcase data dynamically from API
+(async function loadShowcase() {
+  try {
+    const resp = await fetch('/api/scan/list');
+    if (!resp.ok) return;
+    const jobs = await resp.json();
+    const completed = jobs.filter(j => j.status === 'completed' && j.best_model);
+    if (completed.length < 1) return;
+
+    // Get scores for up to 3 most recent completed scans
+    const cards = [];
+    for (const job of completed.slice(0, 3)) {
+      try {
+        const sr = await fetch('/api/score/' + encodeURIComponent(job.ticker));
+        if (!sr.ok) continue;
+        const data = await sr.json();
+        const a = data.alpha_score;
+        const d = a.details || {};
+        const excess = d.best_return - d.bh_return;
+        const scoreClass = a.score >= 7 ? 'high' : 'mid';
+        const modelNames = {
+          LGBModel:'LightGBM', XGBModel:'XGBoost', CatBoostModel:'CatBoost',
+          LinearModel:'Linear', DEnsembleModel:'Ensemble',
+          LSTM_flat:'LSTM', GRU_flat:'GRU', ALSTM_flat:'ALSTM',
+          LSTM_ts:'LSTM-TS', GRU_ts:'GRU-TS', ALSTM_ts:'ALSTM-TS',
+          ADARNN:'ADARNN', Transformer_flat:'Transformer', GATs_flat:'GATs',
+          Transformer_ts:'Transformer-TS', LocalFormer_ts:'LocalFormer',
+          GATs_ts:'GATs-TS', TCN_flat:'TCN', TabnetModel:'TabNet',
+          SFM:'SFM', DNNModelPytorch:'DNN', TCN_ts:'TCN-TS',
+        };
+        const bestName = modelNames[data.best_model] || data.best_model;
+        const retClass = d.best_return >= 0 ? 'pos' : 'neg';
+        const exClass = excess >= 0 ? 'pos' : 'neg';
+        cards.push(`
+          <div class="showcase-card">
+            <div class="sc-top">
+              <span class="sc-ticker">${data.ticker}</span>
+              <span class="sc-score ${scoreClass}">AlphaScore ${a.score}</span>
+            </div>
+            <div class="sc-model">最佳模型: ${bestName} &middot; 样本外测试</div>
+            <div class="sc-metrics">
+              <div class="sc-m"><div class="v ${retClass}">${d.best_return >= 0 ? '+' : ''}${d.best_return}%</div><div class="k">模型收益</div></div>
+              <div class="sc-m"><div class="v">${d.bh_return >= 0 ? '+' : ''}${d.bh_return}%</div><div class="k">买入持有</div></div>
+              <div class="sc-m"><div class="v ${exClass}">${excess >= 0 ? '+' : ''}${excess.toFixed(1)}%</div><div class="k">超额收益</div></div>
+            </div>
+          </div>
+        `);
+      } catch (_) {}
+    }
+    if (cards.length > 0) {
+      document.getElementById('showcaseGrid').innerHTML = cards.join('');
+    }
+  } catch (_) {}
+})();
+</script>
+
+</body>
+</html>

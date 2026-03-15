@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AlphaScout — Pitch</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+:root {
+  --bg:#0a0e17; --card:#131a2b; --border:#1e2d45;
+  --t:#c4d3e8; --dim:#6b7f99; --bright:#eaf0f8; --w:#ffffff;
+  --blue:#4d9fff; --green:#34d399; --orange:#f59e0b;
+  --red:#ef4444; --purple:#a78bfa; --cyan:#22d3ee;
+  --grad:linear-gradient(135deg,#4d9fff,#34d399);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--t);overflow:hidden;width:100vw;height:100vh;}
+
+/* === DECK === */
+.deck{width:100vw;height:100vh;position:relative;}
+.slide{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:60px 80px;opacity:0;pointer-events:none;transition:opacity .5s;}
+.slide.active{opacity:1;pointer-events:all;}
+
+/* progress + counter */
+.pbar{position:fixed;top:0;left:0;height:3px;background:var(--grad);transition:width .4s;z-index:200;}
+.cnt{position:fixed;bottom:20px;right:28px;font-size:12px;color:var(--dim);z-index:200;font-variant-numeric:tabular-nums;}
+.wm{position:fixed;top:20px;left:28px;font-size:14px;font-weight:800;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;z-index:200;}
+.hint{position:fixed;bottom:20px;left:28px;font-size:11px;color:var(--dim);opacity:.4;z-index:200;}
+
+/* === ANIMATIONS === */
+@keyframes fadeUp{from{opacity:0;transform:translateY(30px);}to{opacity:1;transform:translateY(0);}}
+@keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+@keyframes scaleIn{from{opacity:0;transform:scale(.85);}to{opacity:1;transform:scale(1);}}
+@keyframes slideLeft{from{opacity:0;transform:translateX(60px);}to{opacity:1;transform:translateX(0);}}
+@keyframes slideRight{from{opacity:0;transform:translateX(-60px);}to{opacity:1;transform:translateX(0);}}
+@keyframes countUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
+@keyframes ringDraw{from{stroke-dashoffset:264;}to{stroke-dashoffset:var(--target-offset);}}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 #34d39944;}50%{box-shadow:0 0 0 12px #34d39900;}}
+@keyframes typewriter{from{width:0;}to{width:100%;}}
+
+.slide.active .a-up{animation:fadeUp .6s ease both;}
+.slide.active .a-up-d1{animation:fadeUp .6s .15s ease both;}
+.slide.active .a-up-d2{animation:fadeUp .6s .3s ease both;}
+.slide.active .a-up-d3{animation:fadeUp .6s .45s ease both;}
+.slide.active .a-up-d4{animation:fadeUp .6s .6s ease both;}
+.slide.active .a-up-d5{animation:fadeUp .6s .75s ease both;}
+.slide.active .a-scale{animation:scaleIn .5s ease both;}
+.slide.active .a-scale-d1{animation:scaleIn .5s .2s ease both;}
+.slide.active .a-scale-d2{animation:scaleIn .5s .4s ease both;}
+.slide.active .a-scale-d3{animation:scaleIn .5s .6s ease both;}
+.slide.active .a-left{animation:slideLeft .6s ease both;}
+.slide.active .a-left-d1{animation:slideLeft .6s .15s ease both;}
+.slide.active .a-left-d2{animation:slideLeft .6s .3s ease both;}
+.slide.active .a-right{animation:slideRight .6s ease both;}
+.slide.active .a-fade{animation:fadeIn .6s ease both;}
+.slide.active .a-fade-d1{animation:fadeIn .6s .3s ease both;}
+.slide.active .a-fade-d2{animation:fadeIn .6s .6s ease both;}
+.slide.active .a-fade-d3{animation:fadeIn .6s .9s ease both;}
+.slide.active .a-count{animation:countUp .5s ease both;}
+.slide.active .a-count-d1{animation:countUp .5s .1s ease both;}
+.slide.active .a-count-d2{animation:countUp .5s .2s ease both;}
+.slide.active .a-count-d3{animation:countUp .5s .3s ease both;}
+
+/* === TYPOGRAPHY === */
+.slide h1{font-size:56px;font-weight:900;color:var(--bright);line-height:1.08;text-align:center;max-width:900px;}
+.slide h2{font-size:42px;font-weight:800;color:var(--bright);line-height:1.15;margin-bottom:20px;}
+.slide h3{font-size:26px;font-weight:700;color:var(--bright);margin-bottom:8px;}
+.slide p{font-size:18px;color:var(--t);line-height:1.6;max-width:700px;}
+.sub{font-size:20px;color:var(--dim);text-align:center;margin-top:12px;max-width:600px;}
+em{font-style:normal;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.tag{display:inline-block;font-size:12px;font-weight:700;padding:5px 14px;border-radius:100px;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:16px;}
+.tag-red{background:#ef444418;color:var(--red);border:1px solid #ef444433;}
+.tag-blue{background:#4d9fff18;color:var(--blue);border:1px solid #4d9fff33;}
+.tag-green{background:#34d39918;color:var(--green);border:1px solid #34d39933;}
+.tag-purple{background:#a78bfa18;color:var(--purple);border:1px solid #a78bfa33;}
+.tag-orange{background:#f59e0b18;color:var(--orange);border:1px solid #f59e0b33;}
+
+/* === COMPONENTS === */
+.glow{position:absolute;border-radius:50%;pointer-events:none;filter:blur(120px);opacity:.08;}
+
+/* pain cards */
+.pain-row{display:flex;gap:20px;margin-top:32px;max-width:960px;width:100%;}
+.pain-card{flex:1;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:24px;text-align:center;}
+.pain-card .icon{font-size:32px;margin-bottom:10px;}
+.pain-card h3{font-size:17px;margin-bottom:6px;}
+.pain-card p{font-size:13px;color:var(--dim);max-width:none;}
+.pain-card .price{font-size:22px;font-weight:800;color:var(--red);margin-top:8px;}
+
+/* insight */
+.vs-box{display:flex;gap:40px;margin-top:36px;align-items:center;max-width:800px;}
+.vs-stock{flex:1;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:24px;text-align:center;}
+.vs-stock .ticker{font-size:28px;font-weight:900;color:var(--bright);}
+.vs-stock .model{font-size:14px;color:var(--green);margin-top:8px;font-weight:600;}
+.vs-x{font-size:28px;color:var(--dim);font-weight:300;}
+
+/* big number */
+.big-eq{font-size:60px;font-weight:900;color:var(--bright);text-align:center;margin-top:36px;line-height:1.2;}
+.big-eq em{font-size:60px;}
+
+/* demo placeholder */
+.demo-box{width:100%;max-width:900px;aspect-ratio:16/9;background:var(--card);border:2px solid var(--border);border-radius:16px;display:flex;align-items:center;justify-content:center;margin-top:20px;position:relative;overflow:hidden;}
+.demo-box::after{content:'';position:absolute;inset:0;background:linear-gradient(135deg,#4d9fff06,#34d39906);}
+.demo-label{z-index:1;text-align:center;}
+.demo-label .main{font-size:18px;color:var(--dim);font-weight:500;}
+.demo-label .url{font-size:14px;color:var(--blue);margin-top:6px;}
+.demo-label .note{font-size:12px;color:var(--dim);margin-top:12px;opacity:.6;}
+
+/* score ring */
+.ring-demo{display:flex;gap:40px;align-items:center;justify-content:center;margin-top:32px;}
+.ring-wrap{text-align:center;}
+.ring{width:120px;height:120px;position:relative;margin:0 auto 8px;}
+.ring svg{width:100%;height:100%;transform:rotate(-90deg);}
+.ring circle{fill:none;stroke-width:8;stroke-linecap:round;}
+.ring .bg{stroke:var(--border);}
+.ring .fg{stroke:var(--green);stroke-dasharray:264;transition:stroke-dashoffset 1.2s ease;}
+.slide.active .ring .fg{stroke-dashoffset:var(--target);}
+.ring .num{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:36px;font-weight:900;color:var(--bright);}
+.ring-ticker{font-size:14px;font-weight:700;color:var(--dim);letter-spacing:1px;}
+.ring-label{font-size:16px;font-weight:700;margin-top:4px;}
+
+/* results table mock */
+.mock-table{width:100%;max-width:800px;margin-top:20px;border-collapse:collapse;background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;}
+.mock-table th{padding:10px 16px;text-align:left;font-size:12px;color:var(--dim);font-weight:600;background:#0d1220;border-bottom:1px solid var(--border);}
+.mock-table td{padding:10px 16px;font-size:14px;border-bottom:1px solid var(--border);}
+.mock-table tr:last-child td{border:none;}
+.mock-table .rank{color:var(--dim);font-weight:600;width:40px;}
+.mock-table .model-name{font-weight:700;color:var(--bright);}
+.pos{color:var(--green);font-weight:600;}
+.neg{color:var(--red);font-weight:600;}
+.mock-table tr.best{background:#34d39908;}
+.oos-badge{display:inline-block;background:#34d39920;color:var(--green);font-size:11px;font-weight:700;padding:3px 10px;border-radius:6px;margin-left:8px;}
+
+/* market bars */
+.market-row{display:flex;gap:36px;align-items:flex-end;height:200px;margin-top:28px;justify-content:center;}
+.mbar{display:flex;flex-direction:column;align-items:center;gap:6px;}
+.mbar .bar{width:90px;border-radius:10px 10px 0 0;}
+.mbar .val{font-size:18px;font-weight:800;color:var(--bright);}
+.mbar .lbl{font-size:11px;color:var(--dim);text-align:center;max-width:90px;}
+
+/* competitor row */
+.comp-row{display:flex;gap:16px;margin-top:32px;max-width:900px;width:100%;}
+.comp-card{flex:1;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px;text-align:center;}
+.comp-card.us{border-color:var(--green);background:#34d39908;}
+.comp-card .name{font-size:15px;font-weight:700;color:var(--bright);margin-bottom:4px;}
+.comp-card .diff{font-size:12px;color:var(--dim);}
+.comp-card.us .diff{color:var(--green);}
+
+/* pricing */
+.price-row{display:flex;gap:20px;margin-top:28px;max-width:800px;}
+.price-card{flex:1;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:24px;text-align:center;position:relative;}
+.price-card.feat{border-color:var(--blue);}
+.price-card.feat::before{content:'POPULAR';position:absolute;top:10px;right:-24px;background:var(--blue);color:#fff;font-size:9px;font-weight:800;padding:2px 28px;transform:rotate(45deg);}
+.price-card .tier{font-size:12px;color:var(--dim);font-weight:600;letter-spacing:1px;text-transform:uppercase;}
+.price-card .amt{font-size:32px;font-weight:900;color:var(--bright);margin:6px 0;}
+.price-card .amt span{font-size:14px;font-weight:400;color:var(--dim);}
+.price-card ul{list-style:none;text-align:left;margin-top:12px;}
+.price-card li{font-size:12px;color:var(--dim);padding:3px 0;}
+.price-card li::before{content:'\2713 ';color:var(--green);font-weight:700;}
+
+/* roadmap */
+.road{display:flex;gap:0;width:100%;max-width:800px;margin-top:24px;}
+.road-item{flex:1;text-align:center;position:relative;padding-top:32px;}
+.road-item::before{content:'';position:absolute;top:10px;left:0;right:0;height:2px;background:var(--border);}
+.road-item:first-child::before{left:50%;}
+.road-item:last-child::before{right:50%;}
+.road-dot{width:10px;height:10px;border-radius:50%;position:absolute;top:6px;left:50%;transform:translateX(-50%);z-index:1;}
+.road-dot.done{background:var(--green);}
+.road-dot.now{background:var(--orange);box-shadow:0 0 10px var(--orange);}
+.road-dot.future{background:var(--border);}
+.road-item h4{font-size:13px;font-weight:700;color:var(--bright);margin-bottom:2px;}
+.road-item p{font-size:11px;color:var(--dim);line-height:1.3;}
+
+/* final */
+.final-lines{text-align:center;margin-top:32px;}
+.final-line{font-size:36px;font-weight:800;color:var(--bright);line-height:1.5;}
+.final-url{font-size:24px;color:var(--blue);font-weight:700;margin-top:24px;}
+.final-sub{font-size:15px;color:var(--dim);margin-top:8px;}
+
+/* teleprompter */
+.tp{position:fixed;top:20px;right:28px;z-index:300;max-width:320px;background:rgba(0,0,0,.85);border:1px solid #333;border-radius:10px;padding:14px 16px;font-size:13px;color:#aaa;line-height:1.5;display:none;backdrop-filter:blur(10px);}
+.tp .tp-label{font-size:10px;color:#666;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;}
+body.show-tp .tp{display:block;}
+
+@media(max-width:768px){
+  .slide{padding:40px 20px;}
+  .slide h1{font-size:32px;}
+  .slide h2{font-size:28px;}
+  .pain-row,.comp-row,.price-row{flex-direction:column;}
+  .vs-box{flex-direction:column;gap:16px;}
+  .ring-demo{flex-direction:column;}
+}
+</style>
+</head>
+<body>
+
+<div class="pbar" id="pbar"></div>
+<div class="wm">AlphaScout</div>
+<div class="cnt" id="cnt"></div>
+<div class="hint">Arrow keys / Space &middot; Press T for teleprompter</div>
+
+<div class="deck" id="deck">
+
+<!-- ========== SLIDE 1: HOOK — THE PAIN ========== -->
+<div class="slide active">
+  <div class="glow" style="width:600px;height:600px;background:var(--red);top:-200px;right:-100px;"></div>
+  <span class="tag tag-red a-up">The Problem</span>
+  <h1 class="a-up-d1">You want to use AI to trade stocks.<br>Here are your options.</h1>
+  <div class="pain-row">
+    <div class="pain-card a-scale-d1">
+      <div class="icon">&#128187;</div>
+      <h3>Bloomberg</h3>
+      <p>Charts and data. No ML models. No buy/sell signals.</p>
+      <div class="price">$24,000/yr</div>
+    </div>
+    <div class="pain-card a-scale-d2">
+      <div class="icon">&#128433;</div>
+      <h3>QuantConnect</h3>
+      <p>Powerful, but you need to write Python code yourself.</p>
+      <div class="price">Requires coding</div>
+    </div>
+    <div class="pain-card a-scale-d3">
+      <div class="icon">&#128200;</div>
+      <h3>TradingView</h3>
+      <p>Old-school indicators. RSI, MACD. Zero machine learning.</p>
+      <div class="price">No ML</div>
+    </div>
+  </div>
+  <div class="tp">
+    <div class="tp-label">Script 0:00–0:20</div>
+    "You want to use AI to trade stocks. So you Google it. And you find three options.<br><br>
+    Bloomberg — twenty-four thousand dollars a year. QuantConnect — you need to write Python. TradingView — no machine learning at all.<br><br>
+    What if I told you there's a better way?"
+  </div>
+</div>
+
+<!-- ========== SLIDE 2: THE INSIGHT ========== -->
+<div class="slide">
+  <div class="glow" style="width:500px;height:500px;background:var(--purple);top:-150px;left:-100px;"></div>
+  <span class="tag tag-purple a-up">The Insight</span>
+  <h2 class="a-up-d1">Different stocks need <em>different AI models</em></h2>
+  <p class="a-up-d2" style="text-align:center;max-width:600px;">A Transformer might crush it on NVDA but fail on MSFT. The only way to know which model works best is to <strong style="color:var(--bright)">test them all</strong>.</p>
+  <div class="vs-box">
+    <div class="vs-stock a-left">
+      <div class="ticker">AAPL</div>
+      <div style="font-size:13px;color:var(--dim);margin:8px 0;">Best model:</div>
+      <div class="model">GRU +12.4%</div>
+    </div>
+    <div class="vs-x a-fade-d1">&ne;</div>
+    <div class="vs-stock a-left-d1">
+      <div class="ticker">TSLA</div>
+      <div style="font-size:13px;color:var(--dim);margin:8px 0;">Best model:</div>
+      <div class="model">Transformer +18.7%</div>
+    </div>
+    <div class="vs-x a-fade-d2">&ne;</div>
+    <div class="vs-stock a-left-d2">
+      <div class="ticker">NVDA</div>
+      <div style="font-size:13px;color:var(--dim);margin:8px 0;">Best model:</div>
+      <div class="model">LightGBM +24.3%</div>
+    </div>
+  </div>
+  <div class="big-eq a-up-d4">22 models &times; 1 stock = <em>the best strategy</em></div>
+  <div class="tp">
+    <div class="tp-label">Script 0:20–0:50</div>
+    "Here's something most people don't know. Different stocks need different AI models.<br><br>
+    Apple doesn't trade like Tesla. A Transformer might crush it on NVDA, but completely fail on MSFT.<br><br>
+    That's exactly what AlphaScout does. You type a stock ticker. We train over twenty machine learning models. The best one wins. You get a simple answer: buy, sell, or hold."
+  </div>
+</div>
+
+<!-- ========== SLIDE 3: ALPHASCORES + DEMO PLACEHOLDER ========== -->
+<div class="slide">
+  <div class="glow" style="width:500px;height:500px;background:var(--green);bottom:-200px;right:-100px;"></div>
+  <span class="tag tag-green a-up">Live Demo</span>
+  <h2 class="a-up-d1">One stock. One score. One answer.</h2>
+  <div class="ring-demo">
+    <div class="ring-wrap a-scale-d1">
+      <div class="ring-ticker">AAPL</div>
+      <div class="ring"><svg viewBox="0 0 100 100"><circle class="bg" cx="50" cy="50" r="42"/><circle class="fg" cx="50" cy="50" r="42" style="--target:53;stroke:var(--green);stroke-dashoffset:264;"/></svg><div class="num">8</div></div>
+      <div class="ring-label" style="color:var(--green);">Bullish</div>
+    </div>
+    <div class="ring-wrap a-scale-d2">
+      <div class="ring-ticker">TSLA</div>
+      <div class="ring"><svg viewBox="0 0 100 100"><circle class="bg" cx="50" cy="50" r="42"/><circle class="fg" cx="50" cy="50" r="42" style="--target:79;stroke:var(--green);stroke-dashoffset:264;"/></svg><div class="num">7</div></div>
+      <div class="ring-label" style="color:var(--green);">Bullish</div>
+    </div>
+    <div class="ring-wrap a-scale-d3">
+      <div class="ring-ticker">NVDA</div>
+      <div class="ring"><svg viewBox="0 0 100 100"><circle class="bg" cx="50" cy="50" r="42"/><circle class="fg" cx="50" cy="50" r="42" style="--target:26;stroke:var(--green);stroke-dashoffset:264;"/></svg><div class="num">9</div></div>
+      <div class="ring-label" style="color:var(--green);">Strong Buy</div>
+    </div>
+  </div>
+  <div class="demo-box a-up-d3">
+    <div class="demo-label">
+      <div class="main">&#9654; INSERT SCREEN RECORDING HERE</div>
+      <div class="url">alphascout.bjjwwangs.win</div>
+      <div class="note">Record: type AAPL &rarr; AlphaScore animates &rarr; click "View Full Analysis" &rarr; show results table</div>
+    </div>
+  </div>
+  <div class="tp">
+    <div class="tp-label">Script 0:50–1:20</div>
+    "Let me show you. This is live.<br><br>
+    I type 'AAPL'. I hit 'Get AlphaScore'. There it is.<br><br>
+    That score comes from twenty-two models that all trained on Apple's real market data."
+  </div>
+</div>
+
+<!-- ========== SLIDE 4: PROOF — THE RESULTS TABLE ========== -->
+<div class="slide">
+  <span class="tag tag-blue a-up">Out-of-Sample Proof</span>
+  <h2 class="a-up-d1">Every number is from data the AI <em>never saw</em></h2>
+  <p class="a-up-d2" style="text-align:center;font-size:15px;color:var(--dim);">Train 6 months &rarr; Validate 1 month &rarr; Test 1 month (blind) <span class="oos-badge">Out-of-Sample</span></p>
+  <table class="mock-table a-up-d2">
+    <thead><tr><th class="rank">#</th><th>Model</th><th>Model Return</th><th>Buy & Hold</th><th>Excess</th><th>Win Rate</th></tr></thead>
+    <tbody>
+      <tr class="best"><td class="rank">1</td><td class="model-name">GRU</td><td class="pos">+12.4%</td><td>+6.2%</td><td class="pos">+6.2%</td><td>58.3%</td></tr>
+      <tr><td class="rank">2</td><td class="model-name">ALSTM</td><td class="pos">+10.1%</td><td>+6.2%</td><td class="pos">+3.9%</td><td>55.1%</td></tr>
+      <tr><td class="rank">3</td><td class="model-name">LightGBM</td><td class="pos">+9.8%</td><td>+6.2%</td><td class="pos">+3.6%</td><td>54.7%</td></tr>
+      <tr><td class="rank">4</td><td class="model-name">Transformer</td><td class="pos">+7.3%</td><td>+6.2%</td><td class="pos">+1.1%</td><td>52.4%</td></tr>
+      <tr><td class="rank">5</td><td class="model-name">XGBoost</td><td class="pos">+5.9%</td><td>+6.2%</td><td class="neg">-0.3%</td><td>51.2%</td></tr>
+      <tr style="opacity:.4"><td class="rank">...</td><td>15+ more models</td><td></td><td></td><td></td><td></td></tr>
+    </tbody>
+  </table>
+  <p class="a-up-d3" style="text-align:center;font-size:14px;color:var(--dim);margin-top:16px;">
+    <strong style="color:var(--bright)">Key:</strong>
+    <em>Excess Return</em> = Model beat (or lost to) simply holding the stock. Positive = real alpha.
+  </p>
+  <div class="tp">
+    <div class="tp-label">Script 1:20–1:45</div>
+    "Here's every model, ranked. GRU returned plus twelve percent. But Apple only went up six percent. So GRU beat buy-and-hold by six points. That's real alpha.<br><br>
+    And this is the key part — these are out-of-sample results. The model never saw this test data. This isn't curve-fitting. This is real predictive performance.<br><br>
+    Now, the full scan takes time. So we built Quick Predict — I click here, type any ticker, and get an instant signal from a pre-trained model. Buy, sell, or hold — in seconds, not minutes."
+  </div>
+</div>
+
+<!-- ========== SLIDE 5: MARKET + COMPETITION ========== -->
+<div class="slide">
+  <span class="tag tag-orange a-up">Market Opportunity</span>
+  <h2 class="a-up-d1">150M new traders. <em>Zero</em> auto-scan competitors.</h2>
+  <div class="market-row">
+    <div class="mbar a-count">
+      <div class="val">$12B</div>
+      <div class="bar" style="height:180px;background:var(--grad);"></div>
+      <div class="lbl">Retail Trading Tools (TAM)</div>
+    </div>
+    <div class="mbar a-count-d1">
+      <div class="val">$3.2B</div>
+      <div class="bar" style="height:100px;background:linear-gradient(135deg,var(--purple),var(--blue));"></div>
+      <div class="lbl">AI-Powered Trading (SAM)</div>
+    </div>
+    <div class="mbar a-count-d2">
+      <div class="val">$180M</div>
+      <div class="bar" style="height:40px;background:linear-gradient(135deg,var(--orange),var(--red));"></div>
+      <div class="lbl">Auto ML Signal (SOM)</div>
+    </div>
+  </div>
+  <div class="comp-row a-up-d3">
+    <div class="comp-card">
+      <div class="name">TradingView</div>
+      <div class="diff">Indicators only. No ML.</div>
+    </div>
+    <div class="comp-card">
+      <div class="name">Danelfin</div>
+      <div class="diff">AI score, but 1 model only.</div>
+    </div>
+    <div class="comp-card">
+      <div class="name">QuantConnect</div>
+      <div class="diff">Powerful, but requires coding.</div>
+    </div>
+    <div class="comp-card us">
+      <div class="name" style="color:var(--green);">AlphaScout</div>
+      <div class="diff">22 models compete. No code. Free.</div>
+    </div>
+  </div>
+  <div class="tp">
+    <div class="tp-label">Script 1:45–2:10</div>
+    "Since 2020, over a hundred and fifty million new people started trading. The market is twelve billion dollars.<br><br>
+    And automatic multi-model comparison? Nobody does this. Danelfin does AI scores but uses one model. We train twenty-two and let them compete."
+  </div>
+</div>
+
+<!-- ========== SLIDE 6: BUSINESS MODEL ========== -->
+<div class="slide">
+  <span class="tag tag-green a-up">Business Model</span>
+  <h2 class="a-up-d1"><em>Membership + Credits</em> — pay for what you use</h2>
+  <p class="a-up-d1" style="text-align:center;font-size:13px;color:var(--dim);margin-bottom:18px;">1 Quick Predict = 1 credit &nbsp;|&nbsp; 1 Full Scan = 5 credits</p>
+  <div class="price-row">
+    <div class="price-card a-scale-d1">
+      <div class="tier">Free</div>
+      <div class="amt">$0</div>
+      <ul><li>3 credits / month</li><li>Quick Predict only</li><li>End-of-day signals</li></ul>
+    </div>
+    <div class="price-card feat a-scale-d2">
+      <div class="tier">Pro</div>
+      <div class="amt">$19<span>/mo</span></div>
+      <ul><li>50 credits / month</li><li>All 22 models</li><li>Full Scan + Quick Predict</li><li>AlphaScore alerts</li></ul>
+    </div>
+    <div class="price-card a-scale-d3">
+      <div class="tier">Power</div>
+      <div class="amt">$49<span>/mo</span></div>
+      <ul><li>200 credits / month</li><li>API access</li><li>Priority GPU queue</li><li>Webhook alerts</li></ul>
+    </div>
+  </div>
+  <div class="road a-up-d4">
+    <div class="road-item"><div class="road-dot done"></div><h4>Q1 2026</h4><p>Web app live<br>22 models</p></div>
+    <div class="road-item"><div class="road-dot now"></div><h4>Q2 2026</h4><p>Mobile app<br>Push alerts</p></div>
+    <div class="road-item"><div class="road-dot future"></div><h4>Q3 2026</h4><p>Brokerage<br>integration</p></div>
+    <div class="road-item"><div class="road-dot future"></div><h4>Q4 2026</h4><p>API market<br>Crypto</p></div>
+  </div>
+  <div class="tp">
+    <div class="tp-label">Script 2:10–2:35</div>
+    "Right now, AlphaScout is completely free — I'm running it on my own GPU server so you can try it with zero cost.<br><br>
+    Built on Microsoft Qlib, running on an NVIDIA RTX PRO 6000 GPU.<br><br>
+    To scale, we'll move to cloud GPU clusters with a membership-plus-credits model. Free users get a few scans per month. Members pay a monthly fee with a credit allowance — each scan costs credits, because every model run burns real GPU time."
+  </div>
+</div>
+
+<!-- ========== SLIDE 7: CLOSE ========== -->
+<div class="slide">
+  <div class="glow" style="width:700px;height:700px;background:var(--blue);top:-250px;left:-200px;"></div>
+  <div class="glow" style="width:400px;height:400px;background:var(--green);bottom:-150px;right:-100px;"></div>
+  <div class="final-lines">
+    <div class="final-line a-up">22 AI Models.</div>
+    <div class="final-line a-up-d1">600+ US Stocks.</div>
+    <div class="final-line a-up-d2"><em>One Answer.</em></div>
+  </div>
+  <div class="final-url a-up-d3">alphascout.bjjwwangs.win</div>
+  <div class="final-sub a-up-d4">Type any stock. Get your AlphaScore. Buy, sell, or hold.</div>
+  <div style="margin-top:32px;" class="a-up-d5">
+    <div style="font-size:14px;color:var(--dim);">Thank you.</div>
+  </div>
+  <div class="tp">
+    <div class="tp-label">Script 2:35–3:00</div>
+    "Let me leave you with this. Ninety-five percent of retail traders lose money. Not because they're dumb — because they don't have the right tools. We built the tool.<br><br>
+    Over twenty AI models. Over five thousand stocks. One clear answer.<br><br>
+    Try it right now. alphascout.bjjwwangs.win. Type any stock. Get your AlphaScore.<br><br>
+    Thank you."
+  </div>
+</div>
+
+</div><!-- /deck -->
+
+<script>
+const slides = document.querySelectorAll('.slide');
+const pbar = document.getElementById('pbar');
+const cnt = document.getElementById('cnt');
+let cur = 0;
+
+function show(n) {
+  if (n < 0 || n >= slides.length) return;
+  slides[cur].classList.remove('active');
+  cur = n;
+  slides[cur].classList.add('active');
+  pbar.style.width = ((cur + 1) / slides.length * 100) + '%';
+  cnt.textContent = (cur + 1) + ' / ' + slides.length;
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'ArrowDown') { e.preventDefault(); show(cur + 1); }
+  else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); show(cur - 1); }
+  else if (e.key === 'Home') { e.preventDefault(); show(0); }
+  else if (e.key === 'End') { e.preventDefault(); show(slides.length - 1); }
+  else if (e.key === 't' || e.key === 'T') { document.body.classList.toggle('show-tp'); }
+});
+
+let tx = 0;
+document.addEventListener('touchstart', e => { tx = e.changedTouches[0].screenX; });
+document.addEventListener('touchend', e => { const d = e.changedTouches[0].screenX - tx; if (d < -50) show(cur + 1); else if (d > 50) show(cur - 1); });
+document.addEventListener('click', e => { if (e.target.tagName === 'A') return; if (e.clientX > window.innerWidth / 2) show(cur + 1); else show(cur - 1); });
+
+show(0);
+</script>
+</body>
+</html>

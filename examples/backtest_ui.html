@@ -1,0 +1,1244 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Qlib Backtest Lab</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --card: #161b22;
+    --border: #30363d;
+    --text: #c9d1d9;
+    --text-dim: #8b949e;
+    --accent: #58a6ff;
+    --accent2: #3fb950;
+    --accent3: #d29922;
+    --danger: #f85149;
+    --input-bg: #0d1117;
+    --hover: #1f2937;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+  }
+  /* Header */
+  .header {
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header h1 {
+    font-size: 20px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .header h1 span.logo {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .header .status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--text-dim);
+  }
+  .header .status .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent2);
+  }
+  /* Layout */
+  .main {
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    min-height: calc(100vh - 57px);
+  }
+  /* Sidebar */
+  .sidebar {
+    background: var(--card);
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    padding: 0;
+  }
+  .sidebar-section {
+    border-bottom: 1px solid var(--border);
+    padding: 16px 20px;
+  }
+  .sidebar-section:last-child { border-bottom: none; }
+  .section-title {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-dim);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .section-title .num {
+    background: var(--accent);
+    color: var(--bg);
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 700;
+  }
+  /* Form Controls */
+  label {
+    display: block;
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-bottom: 4px;
+    font-weight: 500;
+  }
+  select, input[type="text"], input[type="number"], input[type="date"] {
+    width: 100%;
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 7px 10px;
+    color: var(--text);
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  select:focus, input:focus {
+    border-color: var(--accent);
+  }
+  select { cursor: pointer; }
+  .form-row {
+    margin-bottom: 10px;
+  }
+  .form-row-inline {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .form-row-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  /* Chips */
+  .chip-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+  .chip {
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: all 0.2s;
+    user-select: none;
+  }
+  .chip:hover { border-color: var(--accent); color: var(--accent); }
+  .chip.active {
+    background: var(--accent);
+    color: var(--bg);
+    border-color: var(--accent);
+    font-weight: 600;
+  }
+  .chip.ts { border-color: #3fb95055; }
+  .chip.ts.active { background: var(--accent2); border-color: var(--accent2); }
+  /* Tags */
+  .tag {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 600;
+    margin-left: 4px;
+  }
+  .tag.pytorch { background: #ee4c2c33; color: #ee4c2c; }
+  .tag.sklearn { background: #58a6ff22; color: var(--accent); }
+  .tag.ts { background: #3fb95033; color: var(--accent2); }
+  .tag.flat { background: #d2992233; color: var(--accent3); }
+  /* Hyperparams */
+  .hyperparam-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+  .hyperparam-item {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 8px;
+  }
+  .hyperparam-item label {
+    font-size: 10px;
+    margin-bottom: 2px;
+  }
+  .hyperparam-item input {
+    padding: 4px 6px;
+    font-size: 12px;
+  }
+  /* Ticker search */
+  .ticker-search {
+    position: relative;
+  }
+  .ticker-search input {
+    padding-left: 30px;
+  }
+  .ticker-search .icon {
+    position: absolute;
+    left: 9px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-dim);
+    font-size: 13px;
+  }
+  .ticker-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 6px;
+  }
+  .ticker-tag {
+    background: var(--accent);
+    color: var(--bg);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    cursor: default;
+  }
+  .ticker-tag .remove {
+    cursor: pointer;
+    opacity: 0.7;
+  }
+  .ticker-tag .remove:hover { opacity: 1; }
+  /* Run Button */
+  .run-btn {
+    width: 100%;
+    padding: 12px;
+    background: linear-gradient(135deg, var(--accent), #1f6feb);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .run-btn:hover { filter: brightness(1.1); transform: translateY(-1px); }
+  .run-btn:active { transform: translateY(0); }
+  .run-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+    filter: none;
+  }
+  /* Content Area */
+  .content {
+    padding: 24px 32px;
+    overflow-y: auto;
+  }
+  /* Config Preview */
+  .config-preview {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 24px;
+    overflow: hidden;
+  }
+  .config-preview .preview-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .config-preview pre {
+    padding: 16px;
+    font-size: 12px;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    line-height: 1.6;
+    overflow-x: auto;
+    color: var(--text);
+    max-height: 400px;
+    overflow-y: auto;
+  }
+  .config-preview pre .key { color: var(--accent); }
+  .config-preview pre .str { color: var(--accent2); }
+  .config-preview pre .num { color: var(--accent3); }
+  .config-preview pre .comment { color: var(--text-dim); }
+  /* Results Panel */
+  .results-panel {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .results-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .results-body {
+    padding: 24px;
+    min-height: 300px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .results-empty {
+    text-align: center;
+    color: var(--text-dim);
+  }
+  .results-empty .icon { font-size: 48px; margin-bottom: 12px; }
+  .results-empty p { font-size: 14px; }
+  /* Summary Cards */
+  .summary-cards {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .summary-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+  }
+  .summary-card .label { font-size: 11px; color: var(--text-dim); margin-bottom: 4px; }
+  .summary-card .value { font-size: 22px; font-weight: 700; }
+  .summary-card .value.positive { color: var(--accent2); }
+  .summary-card .value.negative { color: var(--danger); }
+  /* Trade Table */
+  .trade-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+  .trade-table th {
+    text-align: left;
+    padding: 8px 10px;
+    border-bottom: 2px solid var(--border);
+    font-size: 11px;
+    color: var(--text-dim);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+  .trade-table td {
+    padding: 7px 10px;
+    border-bottom: 1px solid var(--border);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+  }
+  .trade-table tr:hover { background: var(--hover); }
+  .trade-table .positive { color: var(--accent2); }
+  .trade-table .negative { color: var(--danger); }
+  /* Timeline */
+  .timeline-bar {
+    display: flex;
+    height: 32px;
+    border-radius: 6px;
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+  .timeline-seg {
+    position: relative;
+    min-width: 2px;
+    transition: opacity 0.2s;
+  }
+  .timeline-seg:hover { opacity: 0.8; }
+  .timeline-seg.hold { background: var(--accent2); }
+  .timeline-seg.empty { background: var(--border); }
+  /* Tooltip */
+  .tooltip {
+    position: fixed;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 12px;
+    pointer-events: none;
+    z-index: 1000;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    display: none;
+  }
+  /* Tabs */
+  .tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 16px;
+  }
+  .tab {
+    padding: 8px 16px;
+    font-size: 13px;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    color: var(--text-dim);
+    transition: all 0.2s;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+  /* Toggle */
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .toggle-row label { margin-bottom: 0; }
+  .toggle {
+    width: 36px; height: 20px;
+    background: var(--border);
+    border-radius: 10px;
+    position: relative;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .toggle.on { background: var(--accent); }
+  .toggle::after {
+    content: '';
+    width: 16px; height: 16px;
+    background: #fff;
+    border-radius: 50%;
+    position: absolute;
+    top: 2px; left: 2px;
+    transition: left 0.2s;
+  }
+  .toggle.on::after { left: 18px; }
+  /* Feature pills */
+  .feature-section { max-height: 200px; overflow-y: auto; }
+  .feature-pill {
+    display: inline-block;
+    padding: 2px 7px;
+    margin: 2px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-family: monospace;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .feature-pill:hover { border-color: var(--accent); }
+  .feature-pill.active { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+  /* Description */
+  .desc {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 2px;
+    font-style: italic;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="url(#g1)" stroke-width="2"><defs><linearGradient id="g1" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#58a6ff"/><stop offset="100%" stop-color="#3fb950"/></linearGradient></defs><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    <span class="logo">Qlib Backtest Lab</span>
+  </h1>
+  <div class="status">
+    <div class="dot"></div>
+    <span>DB: 5,094 stocks | GPU: RTX PRO 6000</span>
+  </div>
+</div>
+
+<div class="main">
+  <!-- ===== SIDEBAR ===== -->
+  <div class="sidebar">
+
+    <!-- 1. Model -->
+    <div class="sidebar-section">
+      <div class="section-title"><div class="num">1</div> Model</div>
+      <div class="form-row">
+        <label>Category</label>
+        <div class="chip-group" id="modelCategory">
+          <div class="chip active" data-cat="tree" onclick="filterModels('tree')">Tree Models</div>
+          <div class="chip" data-cat="rnn" onclick="filterModels('rnn')">RNN</div>
+          <div class="chip" data-cat="attention" onclick="filterModels('attention')">Attention</div>
+          <div class="chip" data-cat="other" onclick="filterModels('other')">Other</div>
+        </div>
+      </div>
+      <div class="form-row">
+        <label>Model</label>
+        <select id="modelSelect" onchange="onModelChange()">
+          <optgroup label="Tree-based (no GPU needed)" id="optTree">
+            <option value="LGBModel" data-module="qlib.contrib.model.gbdt" data-type="flat" selected>LGBModel (LightGBM)</option>
+            <option value="XGBModel" data-module="qlib.contrib.model.xgboost" data-type="flat">XGBModel (XGBoost)</option>
+            <option value="CatBoostModel" data-module="qlib.contrib.model.catboost_model" data-type="flat">CatBoostModel</option>
+            <option value="LinearModel" data-module="qlib.contrib.model.linear" data-type="flat">LinearModel</option>
+            <option value="DEnsembleModel" data-module="qlib.contrib.model.double_ensemble" data-type="flat">DEnsembleModel (Double Ensemble)</option>
+          </optgroup>
+          <optgroup label="RNN (GPU)" id="optRNN">
+            <option value="LSTM_flat" data-module="qlib.contrib.model.pytorch_lstm" data-type="flat">LSTM (flat)</option>
+            <option value="LSTM_ts" data-module="qlib.contrib.model.pytorch_lstm_ts" data-type="ts">LSTM (time-series)</option>
+            <option value="GRU_flat" data-module="qlib.contrib.model.pytorch_gru" data-type="flat">GRU (flat)</option>
+            <option value="GRU_ts" data-module="qlib.contrib.model.pytorch_gru_ts" data-type="ts">GRU (time-series)</option>
+            <option value="ALSTM_flat" data-module="qlib.contrib.model.pytorch_alstm" data-type="flat">ALSTM (flat)</option>
+            <option value="ALSTM_ts" data-module="qlib.contrib.model.pytorch_alstm_ts" data-type="ts">ALSTM (time-series)</option>
+            <option value="ADARNN" data-module="qlib.contrib.model.pytorch_adarnn" data-type="flat">ADARNN (Adapting RNN)</option>
+          </optgroup>
+          <optgroup label="Attention / Transformer (GPU)" id="optAttention">
+            <option value="Transformer_flat" data-module="qlib.contrib.model.pytorch_transformer" data-type="flat">Transformer (flat)</option>
+            <option value="Transformer_ts" data-module="qlib.contrib.model.pytorch_transformer_ts" data-type="ts">Transformer (time-series)</option>
+            <option value="LocalFormer_ts" data-module="qlib.contrib.model.pytorch_localformer_ts" data-type="ts">LocalFormer (time-series)</option>
+            <option value="GATs_flat" data-module="qlib.contrib.model.pytorch_gats" data-type="flat">GATs (Graph Attention)</option>
+            <option value="GATs_ts" data-module="qlib.contrib.model.pytorch_gats_ts" data-type="ts">GATs (time-series)</option>
+            <option value="TRAModel" data-module="qlib.contrib.model.pytorch_tra" data-type="ts">TRA (Temporal Routing)</option>
+          </optgroup>
+          <optgroup label="Other (GPU)" id="optOther">
+            <option value="TCN_flat" data-module="qlib.contrib.model.pytorch_tcn" data-type="flat">TCN (flat)</option>
+            <option value="TCN_ts" data-module="qlib.contrib.model.pytorch_tcn_ts" data-type="ts">TCN (time-series)</option>
+            <option value="TabnetModel" data-module="qlib.contrib.model.pytorch_tabnet" data-type="flat">TabNet</option>
+            <option value="HIST" data-module="qlib.contrib.model.pytorch_hist" data-type="flat">HIST (Hierarchical)</option>
+            <option value="SFM" data-module="qlib.contrib.model.pytorch_sfm" data-type="flat">SFM (Sequential Feature)</option>
+            <option value="DNNModelPytorch" data-module="qlib.contrib.model.pytorch_nn" data-type="flat">DNN (Deep Neural Net)</option>
+          </optgroup>
+        </select>
+      </div>
+      <div id="modelTags" style="margin-top:6px">
+        <span class="tag sklearn">LightGBM</span>
+        <span class="tag flat">DatasetH</span>
+      </div>
+    </div>
+
+    <!-- 2. Hyperparameters -->
+    <div class="sidebar-section">
+      <div class="section-title"><div class="num">2</div> Hyperparameters</div>
+      <div id="hyperparamContainer">
+        <!-- LightGBM defaults -->
+        <div class="hyperparam-grid" id="hyperparamGrid">
+          <div class="hyperparam-item">
+            <label>learning_rate</label>
+            <input type="number" step="0.001" value="0.0421" id="hp_lr">
+          </div>
+          <div class="hyperparam-item">
+            <label>max_depth</label>
+            <input type="number" value="8" id="hp_depth">
+          </div>
+          <div class="hyperparam-item">
+            <label>num_leaves</label>
+            <input type="number" value="210" id="hp_leaves">
+          </div>
+          <div class="hyperparam-item">
+            <label>lambda_l1</label>
+            <input type="number" step="0.1" value="205.7" id="hp_l1">
+          </div>
+          <div class="hyperparam-item">
+            <label>lambda_l2</label>
+            <input type="number" step="0.1" value="580.98" id="hp_l2">
+          </div>
+          <div class="hyperparam-item">
+            <label>subsample</label>
+            <input type="number" step="0.01" value="0.88" id="hp_subsample">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. Features -->
+    <div class="sidebar-section">
+      <div class="section-title"><div class="num">3</div> Features</div>
+      <div class="form-row">
+        <label>Feature Set</label>
+        <select id="featureSet" onchange="onFeatureSetChange()">
+          <option value="Alpha158">Alpha158 (158 technical factors)</option>
+          <option value="Alpha360">Alpha360 (360 raw price features)</option>
+          <option value="Alpha158_20">Alpha158 Top20 (GRU recommended)</option>
+          <option value="custom">Custom selection...</option>
+        </select>
+      </div>
+      <div id="featureDetail" class="feature-section" style="display:none">
+        <!-- populated dynamically -->
+      </div>
+      <div id="tsOptions" style="display:none">
+        <div class="form-row" style="margin-top:8px">
+          <label>Sequence Length (step_len)</label>
+          <input type="number" id="stepLen" value="20" min="5" max="60">
+          <div class="desc">Time-series lookback window (days)</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. Data Source -->
+    <div class="sidebar-section">
+      <div class="section-title"><div class="num">4</div> Data Source</div>
+      <div class="form-row">
+        <label>Source</label>
+        <select id="dataSource" onchange="onDataSourceChange()">
+          <option value="db">stock_data.db (5,094 stocks, latest)</option>
+          <option value="yfinance">yfinance (625 SP500, 2000-2026)</option>
+          <option value="baostock">baostock (690 CSI300, A-shares)</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label>K-line Interval</label>
+        <select id="klineInterval">
+          <option value="daily">Daily (1D)</option>
+          <option value="weekly">Weekly (1W)</option>
+          <option value="60min">60 min</option>
+          <option value="30min">30 min</option>
+          <option value="15min">15 min</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- 5. Target Stock -->
+    <div class="sidebar-section">
+      <div class="section-title"><div class="num">5</div> Target Stock</div>
+      <div class="form-row ticker-search">
+        <span class="icon">&#x1F50D;</span>
+        <input type="text" id="tickerInput" placeholder="Type ticker... e.g. INTC, ASST" onkeydown="if(event.key==='Enter')addTicker()">
+      </div>
+      <div class="ticker-tags" id="tickerTags">
+        <div class="ticker-tag">ASST <span class="remove" onclick="removeTicker(this)">&times;</span></div>
+      </div>
+      <div class="form-row" style="margin-top:8px">
+        <label>Training Pool</label>
+        <select id="trainingPool">
+          <option value="all">All stocks in data source</option>
+          <option value="sp500">S&P 500</option>
+          <option value="volatile">Volatile / Meme stocks (15)</option>
+          <option value="same_sector">Same sector as target</option>
+          <option value="target_only">Target stock only</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- 6. Time Range -->
+    <div class="sidebar-section">
+      <div class="section-title"><div class="num">6</div> Time Range</div>
+      <div class="form-row-inline">
+        <div>
+          <label>Train Start</label>
+          <input type="date" id="trainStart" value="2025-02-05">
+        </div>
+        <div>
+          <label>Train End</label>
+          <input type="date" id="trainEnd" value="2025-10-31">
+        </div>
+      </div>
+      <div class="form-row-inline">
+        <div>
+          <label>Valid Start</label>
+          <input type="date" id="validStart" value="2025-11-01">
+        </div>
+        <div>
+          <label>Valid End</label>
+          <input type="date" id="validEnd" value="2025-12-31">
+        </div>
+      </div>
+      <div class="form-row-inline">
+        <div>
+          <label>Test Start</label>
+          <input type="date" id="testStart" value="2026-01-01">
+        </div>
+        <div>
+          <label>Test End</label>
+          <input type="date" id="testEnd" value="2026-03-11">
+        </div>
+      </div>
+    </div>
+
+    <!-- 7. Strategy -->
+    <div class="sidebar-section">
+      <div class="section-title"><div class="num">7</div> Strategy</div>
+      <div class="form-row">
+        <label>Strategy Type</label>
+        <select id="strategyType" onchange="onStrategyChange()">
+          <option value="topk">TopkDropout (portfolio selection)</option>
+          <option value="threshold">Signal Threshold (single stock)</option>
+        </select>
+      </div>
+      <div id="topkParams">
+        <div class="form-row-inline">
+          <div>
+            <label>Top K</label>
+            <input type="number" id="topK" value="50">
+          </div>
+          <div>
+            <label>N Drop</label>
+            <input type="number" id="nDrop" value="5">
+          </div>
+        </div>
+      </div>
+      <div id="thresholdParams" style="display:none">
+        <div class="form-row">
+          <label>Buy Threshold</label>
+          <input type="number" id="buyThreshold" value="0" step="0.01">
+          <div class="desc">Buy when score > threshold</div>
+        </div>
+      </div>
+      <div class="form-row">
+        <label>Initial Capital ($)</label>
+        <input type="number" id="capital" value="100000">
+      </div>
+    </div>
+
+    <!-- 8. Label -->
+    <div class="sidebar-section">
+      <div class="section-title"><div class="num">8</div> Prediction Label</div>
+      <div class="form-row">
+        <select id="labelType" onchange="onLabelChange()">
+          <option value="1d">Next-day return (default)</option>
+          <option value="5d">5-day return</option>
+          <option value="10d">10-day return</option>
+          <option value="20d">20-day return (monthly)</option>
+          <option value="custom">Custom expression...</option>
+        </select>
+      </div>
+      <div id="labelExpr" style="display:none; margin-top:6px">
+        <input type="text" id="customLabel" placeholder="Ref($close, -2)/Ref($close, -1) - 1" value="Ref($close, -2)/Ref($close, -1) - 1">
+      </div>
+      <div class="desc" id="labelDesc">Ref($close, -2)/Ref($close, -1) - 1</div>
+    </div>
+
+    <!-- Run -->
+    <div class="sidebar-section">
+      <button class="run-btn" onclick="runBacktest()" id="runBtn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        Run Backtest
+      </button>
+    </div>
+  </div>
+
+  <!-- ===== CONTENT ===== -->
+  <div class="content">
+    <!-- Config Preview -->
+    <div class="config-preview">
+      <div class="preview-header">
+        <span>Generated Config</span>
+        <span style="font-size:11px;color:var(--text-dim)" id="configPath">qlib_config.yaml</span>
+      </div>
+      <pre id="configPreview"></pre>
+    </div>
+
+    <!-- Results -->
+    <div class="results-panel">
+      <div class="results-header">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><polyline points="9 14 12 10 15 14"/></svg>
+        Results
+      </div>
+      <div class="results-body" id="resultsBody">
+        <div class="results-empty" id="emptyState">
+          <div class="icon">&#x1F4CA;</div>
+          <p>Configure parameters and click <strong>Run Backtest</strong></p>
+          <p style="font-size:12px;margin-top:8px">Results will appear here with trade details,<br>timeline, and buy-and-hold comparison</p>
+        </div>
+        <div id="resultsContent" style="display:none; width:100%">
+          <!-- Summary Cards -->
+          <div class="summary-cards" id="summaryCards">
+            <div class="summary-card">
+              <div class="label">Model Return</div>
+              <div class="value positive" id="modelReturn">+59.95%</div>
+            </div>
+            <div class="summary-card">
+              <div class="label">Buy & Hold</div>
+              <div class="value negative" id="bhReturn">-28.63%</div>
+            </div>
+            <div class="summary-card">
+              <div class="label">Win Rate</div>
+              <div class="value" id="winRate">69.2%</div>
+            </div>
+            <div class="summary-card">
+              <div class="label">Total Trades</div>
+              <div class="value" id="totalTrades">26</div>
+            </div>
+          </div>
+
+          <!-- Timeline -->
+          <div style="margin-bottom:20px">
+            <label style="margin-bottom:8px">Timeline (green = holding, gray = empty)</label>
+            <div class="timeline-bar" id="timelineBar"></div>
+          </div>
+
+          <!-- Tabs -->
+          <div class="tabs">
+            <div class="tab active" onclick="switchTab(this, 'tradesTab')">Trades</div>
+            <div class="tab" onclick="switchTab(this, 'segmentsTab')">All Segments</div>
+            <div class="tab" onclick="switchTab(this, 'statsTab')">Statistics</div>
+          </div>
+
+          <!-- Trades Tab -->
+          <div id="tradesTab">
+            <div style="overflow-x:auto">
+              <table class="trade-table" id="tradeTable">
+                <thead>
+                  <tr>
+                    <th>Buy Date</th>
+                    <th>Buy Price</th>
+                    <th>Sell Date</th>
+                    <th>Sell Price</th>
+                    <th>Days</th>
+                    <th>Return</th>
+                  </tr>
+                </thead>
+                <tbody id="tradeTableBody">
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Segments Tab -->
+          <div id="segmentsTab" style="display:none">
+            <table class="trade-table" id="segmentTable">
+              <thead>
+                <tr>
+                  <th>Type</th>
+                  <th>Start</th>
+                  <th>End</th>
+                  <th>Start Price</th>
+                  <th>End Price</th>
+                  <th>Days</th>
+                  <th>Change</th>
+                </tr>
+              </thead>
+              <tbody id="segmentTableBody"></tbody>
+            </table>
+          </div>
+
+          <!-- Stats Tab -->
+          <div id="statsTab" style="display:none">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px">
+              <div class="summary-card">
+                <div class="label">Holding Periods</div>
+                <div id="holdingStats" style="font-size:13px; margin-top:8px"></div>
+              </div>
+              <div class="summary-card">
+                <div class="label">Empty Periods</div>
+                <div id="emptyStats" style="font-size:13px; margin-top:8px"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+// ===== MODEL HYPERPARAMETER DEFINITIONS =====
+const MODEL_PARAMS = {
+  LGBModel: {
+    tags: ['LightGBM', 'flat'],
+    pytorch: false,
+    params: [
+      { key: 'learning_rate', default: 0.0421, step: 0.001, type: 'number' },
+      { key: 'max_depth', default: 8, step: 1, type: 'number' },
+      { key: 'num_leaves', default: 210, step: 1, type: 'number' },
+      { key: 'lambda_l1', default: 205.7, step: 0.1, type: 'number' },
+      { key: 'lambda_l2', default: 580.98, step: 0.1, type: 'number' },
+      { key: 'subsample', default: 0.88, step: 0.01, type: 'number' },
+      { key: 'colsample_bytree', default: 0.89, step: 0.01, type: 'number' },
+      { key: 'num_threads', default: 20, step: 1, type: 'number' },
+    ]
+  },
+  XGBModel: {
+    tags: ['XGBoost', 'flat'],
+    pytorch: false,
+    params: [
+      { key: 'eta', default: 0.1, step: 0.01, type: 'number' },
+      { key: 'max_depth', default: 6, step: 1, type: 'number' },
+      { key: 'subsample', default: 0.8, step: 0.05, type: 'number' },
+      { key: 'colsample_bytree', default: 0.8, step: 0.05, type: 'number' },
+      { key: 'lambda', default: 1.0, step: 0.1, type: 'number' },
+    ]
+  },
+  CatBoostModel: {
+    tags: ['CatBoost', 'flat'],
+    pytorch: false,
+    params: [
+      { key: 'learning_rate', default: 0.03, step: 0.001, type: 'number' },
+      { key: 'depth', default: 6, step: 1, type: 'number' },
+      { key: 'iterations', default: 1000, step: 100, type: 'number' },
+      { key: 'l2_leaf_reg', default: 3.0, step: 0.1, type: 'number' },
+    ]
+  },
+  LinearModel: {
+    tags: ['Linear', 'flat'],
+    pytorch: false,
+    params: [
+      { key: 'estimator', default: 'ols', type: 'select', options: ['ols','ridge','lasso','nnls'] },
+      { key: 'alpha', default: 0.0, step: 0.01, type: 'number' },
+    ]
+  },
+  DEnsembleModel: {
+    tags: ['Ensemble', 'flat'],
+    pytorch: false,
+    params: [
+      { key: 'num_models', default: 6, step: 1, type: 'number' },
+      { key: 'epochs', default: 100, step: 10, type: 'number' },
+    ]
+  },
+};
+
+// RNN / Attention / Other models share similar params
+const PYTORCH_COMMON = [
+  { key: 'd_feat', default: 20, step: 1, type: 'number' },
+  { key: 'hidden_size', default: 128, step: 16, type: 'number' },
+  { key: 'num_layers', default: 2, step: 1, type: 'number' },
+  { key: 'dropout', default: 0.3, step: 0.05, type: 'number' },
+  { key: 'n_epochs', default: 200, step: 10, type: 'number' },
+  { key: 'lr', default: 0.0005, step: 0.0001, type: 'number' },
+  { key: 'early_stop', default: 20, step: 5, type: 'number' },
+  { key: 'batch_size', default: 64, step: 16, type: 'number' },
+];
+
+['LSTM_flat','LSTM_ts','GRU_flat','GRU_ts','ALSTM_flat','ALSTM_ts','ADARNN',
+ 'Transformer_flat','Transformer_ts','LocalFormer_ts',
+ 'GATs_flat','GATs_ts','TRAModel',
+ 'TCN_flat','TCN_ts','TabnetModel','HIST','SFM','DNNModelPytorch'].forEach(m => {
+  const isTs = m.endsWith('_ts') || m === 'TRAModel';
+  MODEL_PARAMS[m] = {
+    tags: ['PyTorch', isTs ? 'TSDatasetH' : 'DatasetH'],
+    pytorch: true,
+    ts: isTs,
+    params: [...PYTORCH_COMMON]
+  };
+});
+
+// Alpha158 top20 features
+const TOP20_FEATURES = [
+  "RESI5","WVMA5","RSQR5","KLEN","RSQR10","CORR5","CORD5","CORR10",
+  "ROC60","RESI10","VSTD5","RSQR60","CORR60","WVMA60","STD5",
+  "RSQR20","CORD60","CORD10","CORR20","KLOW"
+];
+
+const LABEL_EXPRS = {
+  '1d': 'Ref($close, -2)/Ref($close, -1) - 1',
+  '5d': 'Ref($close, -6)/Ref($close, -1) - 1',
+  '10d': 'Ref($close, -11)/Ref($close, -1) - 1',
+  '20d': 'Ref($close, -21)/Ref($close, -1) - 1',
+};
+
+// ===== UI FUNCTIONS =====
+
+function filterModels(cat) {
+  document.querySelectorAll('#modelCategory .chip').forEach(c => c.classList.remove('active'));
+  document.querySelector(`[data-cat="${cat}"]`).classList.add('active');
+  // Just visual filter hint - all options remain available
+}
+
+function onModelChange() {
+  const sel = document.getElementById('modelSelect');
+  const modelKey = sel.value;
+  const opt = sel.selectedOptions[0];
+  const dataType = opt.dataset.type;
+
+  // Update tags
+  const info = MODEL_PARAMS[modelKey];
+  let tagsHtml = '';
+  if (info) {
+    info.tags.forEach(t => {
+      let cls = t === 'PyTorch' ? 'pytorch' : t.includes('TS') ? 'ts' : t.includes('flat') || t.includes('Dataset') ? 'flat' : 'sklearn';
+      tagsHtml += `<span class="tag ${cls}">${t}</span> `;
+    });
+  }
+  document.getElementById('modelTags').innerHTML = tagsHtml;
+
+  // Show/hide TS options
+  const tsOpts = document.getElementById('tsOptions');
+  tsOpts.style.display = (dataType === 'ts') ? 'block' : 'none';
+
+  // Update hyperparameters
+  renderHyperparams(modelKey);
+  updateConfigPreview();
+}
+
+function renderHyperparams(modelKey) {
+  const info = MODEL_PARAMS[modelKey];
+  if (!info) return;
+
+  const grid = document.getElementById('hyperparamGrid');
+  grid.innerHTML = '';
+  info.params.forEach(p => {
+    const item = document.createElement('div');
+    item.className = 'hyperparam-item';
+    if (p.type === 'select') {
+      item.innerHTML = `<label>${p.key}</label><select id="hp_${p.key}">${p.options.map(o =>
+        `<option value="${o}" ${o===p.default?'selected':''}>${o}</option>`).join('')}</select>`;
+    } else {
+      item.innerHTML = `<label>${p.key}</label><input type="number" step="${p.step||1}" value="${p.default}" id="hp_${p.key}" onchange="updateConfigPreview()">`;
+    }
+    grid.appendChild(item);
+  });
+}
+
+function onFeatureSetChange() {
+  const v = document.getElementById('featureSet').value;
+  document.getElementById('featureDetail').style.display = v === 'custom' ? 'block' : 'none';
+  if (v === 'custom') renderFeaturePills();
+  updateConfigPreview();
+}
+
+function renderFeaturePills() {
+  const allFeatures = [
+    "KMID","KLEN","KMID2","KUP","KUP2","KLOW","KLOW2","KSFT","KSFT2",
+    "OPEN0","HIGH0","LOW0","VWAP0",
+    ...["ROC","MA","STD","BETA","RSQR","RESI","MAX","MIN","QTLU","QTLD","RANK","RSV",
+       "IMAX","IMIN","IMXD","CORR","CORD","CNTP","CNTN","CNTD",
+       "SUMP","SUMN","SUMD","VMA","VSTD","WVMA","VSUMP","VSUMN","VSUMD"].flatMap(
+      f => [5,10,20,30,60].map(w => f+w)
+    )
+  ];
+  const container = document.getElementById('featureDetail');
+  container.innerHTML = allFeatures.map(f =>
+    `<span class="feature-pill ${TOP20_FEATURES.includes(f)?'active':''}" onclick="this.classList.toggle('active');updateConfigPreview()">${f}</span>`
+  ).join('');
+}
+
+function onDataSourceChange() {
+  updateConfigPreview();
+}
+
+function onStrategyChange() {
+  const v = document.getElementById('strategyType').value;
+  document.getElementById('topkParams').style.display = v === 'topk' ? 'block' : 'none';
+  document.getElementById('thresholdParams').style.display = v === 'threshold' ? 'block' : 'none';
+  updateConfigPreview();
+}
+
+function onLabelChange() {
+  const v = document.getElementById('labelType').value;
+  document.getElementById('labelExpr').style.display = v === 'custom' ? 'block' : 'none';
+  document.getElementById('labelDesc').textContent = LABEL_EXPRS[v] || 'Custom expression';
+  updateConfigPreview();
+}
+
+function addTicker() {
+  const input = document.getElementById('tickerInput');
+  const ticker = input.value.trim().toUpperCase();
+  if (!ticker) return;
+  const container = document.getElementById('tickerTags');
+  const existing = [...container.querySelectorAll('.ticker-tag')].map(t => t.textContent.replace('×','').trim());
+  if (existing.includes(ticker)) return;
+  const tag = document.createElement('div');
+  tag.className = 'ticker-tag';
+  tag.innerHTML = `${ticker} <span class="remove" onclick="removeTicker(this)">&times;</span>`;
+  container.appendChild(tag);
+  input.value = '';
+  updateConfigPreview();
+}
+
+function removeTicker(el) {
+  el.parentElement.remove();
+  updateConfigPreview();
+}
+
+function switchTab(tabEl, tabId) {
+  tabEl.parentElement.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  tabEl.classList.add('active');
+  ['tradesTab','segmentsTab','statsTab'].forEach(id => {
+    document.getElementById(id).style.display = id === tabId ? 'block' : 'none';
+  });
+}
+
+// ===== CONFIG PREVIEW =====
+
+function updateConfigPreview() {
+  const sel = document.getElementById('modelSelect');
+  const modelKey = sel.value;
+  const opt = sel.selectedOptions[0];
+  const modulePath = opt.dataset.module;
+  const dataType = opt.dataset.type;
+  const featureSet = document.getElementById('featureSet').value;
+  const strategy = document.getElementById('strategyType').value;
+  const labelType = document.getElementById('labelType').value;
+  const dataSource = document.getElementById('dataSource').value;
+  const kline = document.getElementById('klineInterval').value;
+
+  const tickers = [...document.querySelectorAll('.ticker-tag')]
+    .map(t => t.textContent.replace('×','').trim());
+
+  // Build config string with syntax highlighting
+  let c = '';
+  c += `<span class="comment"># Qlib Backtest Configuration</span>\n`;
+  c += `<span class="comment"># Generated by Backtest Lab</span>\n\n`;
+
+  c += `<span class="key">data_source</span>: <span class="str">"${dataSource}"</span>\n`;
+  c += `<span class="key">kline</span>: <span class="str">"${kline}"</span>\n`;
+  c += `<span class="key">target</span>: [${tickers.map(t=>`<span class="str">"${t}"</span>`).join(', ')}]\n\n`;
+
+  c += `<span class="key">model</span>:\n`;
+  c += `  <span class="key">class</span>: <span class="str">"${modelKey.replace(/_flat|_ts/,'')}"</span>\n`;
+  c += `  <span class="key">module_path</span>: <span class="str">"${modulePath}"</span>\n`;
+  c += `  <span class="key">kwargs</span>:\n`;
+
+  const info = MODEL_PARAMS[modelKey];
+  if (info) {
+    info.params.forEach(p => {
+      const el = document.getElementById(`hp_${p.key}`);
+      const val = el ? el.value : p.default;
+      if (typeof val === 'string' && isNaN(val)) {
+        c += `    <span class="key">${p.key}</span>: <span class="str">"${val}"</span>\n`;
+      } else {
+        c += `    <span class="key">${p.key}</span>: <span class="num">${val}</span>\n`;
+      }
+    });
+    if (info.pytorch) {
+      c += `    <span class="key">GPU</span>: <span class="num">0</span>\n`;
+      c += `    <span class="key">loss</span>: <span class="str">"mse"</span>\n`;
+    }
+  }
+
+  c += `\n<span class="key">dataset</span>:\n`;
+  c += `  <span class="key">class</span>: <span class="str">"${dataType === 'ts' ? 'TSDatasetH' : 'DatasetH'}"</span>\n`;
+  c += `  <span class="key">handler</span>: <span class="str">"${featureSet.startsWith('Alpha') ? featureSet.replace('_20','') : 'Alpha158'}"</span>\n`;
+  if (dataType === 'ts') {
+    c += `  <span class="key">step_len</span>: <span class="num">${document.getElementById('stepLen').value}</span>\n`;
+  }
+
+  c += `  <span class="key">segments</span>:\n`;
+  c += `    <span class="key">train</span>: [<span class="str">"${document.getElementById('trainStart').value}"</span>, <span class="str">"${document.getElementById('trainEnd').value}"</span>]\n`;
+  c += `    <span class="key">valid</span>: [<span class="str">"${document.getElementById('validStart').value}"</span>, <span class="str">"${document.getElementById('validEnd').value}"</span>]\n`;
+  c += `    <span class="key">test</span>:  [<span class="str">"${document.getElementById('testStart').value}"</span>, <span class="str">"${document.getElementById('testEnd').value}"</span>]\n`;
+
+  c += `\n<span class="key">label</span>: <span class="str">"${LABEL_EXPRS[labelType] || document.getElementById('customLabel')?.value || ''}"</span>\n`;
+
+  c += `\n<span class="key">strategy</span>:\n`;
+  if (strategy === 'topk') {
+    c += `  <span class="key">class</span>: <span class="str">"TopkDropoutStrategy"</span>\n`;
+    c += `  <span class="key">topk</span>: <span class="num">${document.getElementById('topK').value}</span>\n`;
+    c += `  <span class="key">n_drop</span>: <span class="num">${document.getElementById('nDrop').value}</span>\n`;
+  } else {
+    c += `  <span class="key">class</span>: <span class="str">"SignalThreshold"</span>\n`;
+    c += `  <span class="key">buy_threshold</span>: <span class="num">${document.getElementById('buyThreshold').value}</span>\n`;
+  }
+  c += `  <span class="key">capital</span>: <span class="num">${document.getElementById('capital').value}</span>\n`;
+
+  document.getElementById('configPreview').innerHTML = c;
+}
+
+// ===== RUN BACKTEST (DEMO) =====
+
+function runBacktest() {
+  const btn = document.getElementById('runBtn');
+  btn.disabled = true;
+  btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="spin"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> Training model...`;
+
+  // Simulate backtest (demo)
+  setTimeout(() => {
+    showDemoResults();
+    btn.disabled = false;
+    btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg> Run Backtest`;
+  }, 2000);
+}
+
+function showDemoResults() {
+  document.getElementById('emptyState').style.display = 'none';
+  document.getElementById('resultsContent').style.display = 'block';
+
+  // Demo trades
+  const trades = [
+    { buy: '2026-01-09', bp: 18.92, sell: '2026-01-14', sp: 20.60, days: 5, ret: 8.88 },
+    { buy: '2026-01-21', bp: 17.84, sell: '2026-02-11', sp: 8.09, days: 21, ret: -54.65 },
+    { buy: '2026-02-12', bp: 7.70, sell: '2026-02-20', sp: 8.15, days: 8, ret: 5.84 },
+    { buy: '2026-02-23', bp: 7.36, sell: '2026-03-02', sp: 8.73, days: 7, ret: 18.61 },
+    { buy: '2026-03-03', bp: 8.33, sell: '2026-03-06', sp: 8.70, days: 3, ret: 4.44 },
+  ];
+
+  const tbody = document.getElementById('tradeTableBody');
+  tbody.innerHTML = trades.map(t => `
+    <tr>
+      <td>${t.buy}</td>
+      <td>$${t.bp.toFixed(2)}</td>
+      <td>${t.sell}</td>
+      <td>$${t.sp.toFixed(2)}</td>
+      <td>${t.days}</td>
+      <td class="${t.ret >= 0 ? 'positive' : 'negative'}">${t.ret >= 0 ? '+' : ''}${t.ret.toFixed(2)}%</td>
+    </tr>
+  `).join('');
+
+  // Demo timeline
+  const bar = document.getElementById('timelineBar');
+  const segs = [
+    { type: 'empty', pct: 12 }, { type: 'hold', pct: 8 },
+    { type: 'empty', pct: 10 }, { type: 'hold', pct: 30 },
+    { type: 'empty', pct: 2 }, { type: 'hold', pct: 12 },
+    { type: 'empty', pct: 4 }, { type: 'hold', pct: 10 },
+    { type: 'empty', pct: 2 }, { type: 'hold', pct: 5 },
+    { type: 'empty', pct: 5 },
+  ];
+  bar.innerHTML = segs.map(s =>
+    `<div class="timeline-seg ${s.type === 'hold' ? 'hold' : 'empty'}" style="flex:${s.pct}"></div>`
+  ).join('');
+
+  // Summary
+  document.getElementById('modelReturn').textContent = '-33.26%';
+  document.getElementById('modelReturn').className = 'value negative';
+  document.getElementById('bhReturn').textContent = '-17.92%';
+  document.getElementById('winRate').textContent = '45.5%';
+  document.getElementById('totalTrades').textContent = '33';
+
+  // Stats
+  document.getElementById('holdingStats').innerHTML = `
+    33 segments, 229 days<br>
+    Up: 15 / Down: 18<br>
+    Avg change: +12.78%
+  `;
+  document.getElementById('emptyStats').innerHTML = `
+    33 segments, 199 days<br>
+    Missed gains: +407.53%<br>
+    Avoided losses: -244.94%
+  `;
+}
+
+// ===== INIT =====
+document.addEventListener('DOMContentLoaded', () => {
+  onModelChange();
+  // Add input listeners for live config update
+  document.querySelectorAll('select, input').forEach(el => {
+    el.addEventListener('change', updateConfigPreview);
+  });
+});
+</script>
+
+<style>
+  @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+  .spin { animation: spin 1s linear infinite; }
+</style>
+
+</body>
+</html>

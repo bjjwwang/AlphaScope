@@ -1,0 +1,2836 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AlphaScout — AI Stock Signal Platform</title>
+<style>
+  :root {
+    --bg: #0d1117; --card: #161b22; --card2: #1c2333;
+    --border: #30363d; --border-light: #3d444d;
+    --text: #c9d1d9; --text-dim: #8b949e; --text-bright: #e6edf3;
+    --accent: #58a6ff; --accent2: #3fb950; --accent3: #d29922;
+    --danger: #f85149; --purple: #bc8cff; --pink: #f778ba;
+    --input-bg: #0d1117; --hover: #1f2937;
+    --step-done: #3fb950; --step-active: #58a6ff; --step-error: #f85149;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    background: var(--bg); color: var(--text); line-height: 1.6;
+    overflow-x: hidden;
+  }
+
+  /* ===== HEADER ===== */
+  .header {
+    background: var(--card); border-bottom: 1px solid var(--border);
+    padding: 14px 32px; display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 100;
+  }
+  .header h1 { font-size: 18px; font-weight: 600; display: flex; align-items: center; gap: 10px; }
+  .header h1 .logo {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .header-right { display: flex; align-items: center; gap: 16px; }
+  .header .status { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-dim); }
+  .header .status .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent2); }
+
+  /* ===== PAGE NAVIGATION ===== */
+  .page-nav {
+    display: flex; gap: 2px; background: var(--bg); border: 1px solid var(--border);
+    border-radius: 8px; padding: 3px;
+  }
+  .page-nav-btn {
+    padding: 6px 16px; border-radius: 6px; border: none; background: transparent;
+    color: var(--text-dim); font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s;
+  }
+  .page-nav-btn:hover { color: var(--text); }
+  .page-nav-btn.active { background: var(--accent); color: #fff; font-weight: 600; }
+  .page-nav-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* ===== PAGE CONTAINER ===== */
+  .page { display: none; min-height: calc(100vh - 57px); }
+  .page.active { display: block; }
+
+  /* ===== CONFIG PAGE ===== */
+  .config-page { padding: 24px 32px; max-width: 1400px; margin: 0 auto; }
+  .config-page h2 { font-size: 22px; font-weight: 600; margin-bottom: 6px; color: var(--text-bright); }
+  .config-page .subtitle { color: var(--text-dim); font-size: 14px; margin-bottom: 24px; }
+
+  .config-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media (max-width: 1000px) { .config-grid { grid-template-columns: 1fr; } }
+
+  .config-section {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 20px 24px; position: relative;
+  }
+  .config-section.full-width { grid-column: 1 / -1; }
+
+  .section-header {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 16px;
+    padding-bottom: 12px; border-bottom: 1px solid var(--border);
+  }
+  .section-num {
+    background: var(--accent); color: var(--bg); width: 24px; height: 24px;
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; flex-shrink: 0;
+  }
+  .section-header h3 { font-size: 15px; font-weight: 600; color: var(--text-bright); }
+  .section-header .section-desc { font-size: 12px; color: var(--text-dim); margin-left: auto; }
+
+  /* ===== FORM CONTROLS ===== */
+  label { display: block; font-size: 12px; color: var(--text-dim); margin-bottom: 4px; font-weight: 500; }
+  select, input[type="text"], input[type="number"], input[type="date"] {
+    width: 100%; background: var(--input-bg); border: 1px solid var(--border);
+    border-radius: 6px; padding: 8px 10px; color: var(--text); font-size: 13px;
+    outline: none; transition: border-color 0.2s;
+  }
+  select:focus, input:focus { border-color: var(--accent); }
+  select { cursor: pointer; }
+  .form-row { margin-bottom: 12px; }
+  .form-row-inline { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+  .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+
+  /* hint text */
+  .hint { font-size: 11px; color: var(--text-dim); margin-top: 3px; line-height: 1.4; }
+  .hint-box {
+    background: #58a6ff0a; border: 1px solid #58a6ff22; border-radius: 8px;
+    padding: 10px 14px; margin-top: 10px; font-size: 12px; color: var(--text-dim); line-height: 1.6;
+  }
+  .hint-box strong { color: var(--accent); font-weight: 600; }
+
+  /* Model cards */
+  .model-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; margin-bottom: 12px; }
+  .model-card {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 14px; cursor: pointer; transition: all 0.2s; position: relative;
+  }
+  .model-card:hover { border-color: var(--accent); background: var(--hover); }
+  .model-card.selected { border-color: var(--accent); background: #58a6ff11; box-shadow: 0 0 0 1px var(--accent); }
+  .model-card.unavailable { opacity: 0.4; cursor: not-allowed; }
+  .model-card.unavailable:hover { border-color: var(--border); background: var(--card); }
+  .model-card .unavail-badge { font-size: 10px; color: var(--danger); margin-top: 4px; }
+  .model-card .model-name { font-size: 13px; font-weight: 600; color: var(--text-bright); margin-bottom: 2px; }
+  .model-card .model-brief { font-size: 11px; color: var(--text-dim); line-height: 1.4; }
+  .model-card .model-tags { margin-top: 6px; display: flex; gap: 4px; flex-wrap: wrap; }
+  .model-card .mtag {
+    font-size: 9px; padding: 1px 6px; border-radius: 3px; font-weight: 600;
+  }
+  .mtag.gpu { background: #ee4c2c22; color: #ee4c2c; }
+  .mtag.cpu { background: #3fb95022; color: var(--accent2); }
+  .mtag.ts { background: #bc8cff22; color: var(--purple); }
+  .mtag.flat { background: #d2992222; color: var(--accent3); }
+  .mtag.short { background: #f778ba22; color: var(--pink); }
+  .mtag.mid { background: #58a6ff22; color: var(--accent); }
+  .mtag.large { background: #3fb95022; color: var(--accent2); }
+  .mtag.meme { background: #f8514922; color: var(--danger); }
+
+  /* Category filter tabs */
+  .cat-tabs { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+  .cat-tab {
+    padding: 5px 12px; border-radius: 6px; border: 1px solid var(--border);
+    background: transparent; color: var(--text-dim); font-size: 12px; cursor: pointer; transition: all 0.2s;
+  }
+  .cat-tab:hover { border-color: var(--accent); color: var(--accent); }
+  .cat-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
+
+  /* Hyperparams */
+  .hp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .hp-item {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px;
+  }
+  .hp-item label { font-size: 11px; margin-bottom: 2px; display: flex; justify-content: space-between; }
+  .hp-item label .hp-hint { font-size: 10px; color: var(--text-dim); font-weight: 400; }
+  .hp-item input, .hp-item select { padding: 5px 8px; font-size: 12px; }
+
+  /* Tags */
+  .tag { display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; margin-left: 4px; }
+  .tag.pytorch { background: #ee4c2c33; color: #ee4c2c; }
+  .tag.sklearn { background: #58a6ff22; color: var(--accent); }
+
+  /* Ticker */
+  .ticker-search { position: relative; }
+  .ticker-search input { padding-left: 10px; }
+  .ticker-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+  .ticker-tag {
+    background: var(--accent); color: var(--bg); padding: 3px 10px; border-radius: 4px;
+    font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 4px;
+  }
+  .ticker-tag .remove { cursor: pointer; opacity: 0.7; font-size: 14px; }
+  .ticker-tag .remove:hover { opacity: 1; }
+
+  /* Feature pills */
+  .feature-section { max-height: 180px; overflow-y: auto; margin-top: 8px; }
+  .feature-pill {
+    display: inline-block; padding: 2px 7px; margin: 2px; border-radius: 4px;
+    font-size: 10px; font-family: monospace; border: 1px solid var(--border);
+    cursor: pointer; transition: all 0.15s;
+  }
+  .feature-pill:hover { border-color: var(--accent); }
+  .feature-pill.active { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+
+  /* Config preview */
+  .config-preview-box {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+    overflow: hidden; margin-top: 12px;
+  }
+  .config-preview-box .preview-title {
+    padding: 8px 14px; border-bottom: 1px solid var(--border); font-size: 12px;
+    font-weight: 600; color: var(--text-dim);
+  }
+  .config-preview-box pre {
+    padding: 14px; font-size: 11px; font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    line-height: 1.6; max-height: 300px; overflow-y: auto; color: var(--text);
+  }
+  .config-preview-box pre .key { color: var(--accent); }
+  .config-preview-box pre .str { color: var(--accent2); }
+  .config-preview-box pre .num { color: var(--accent3); }
+  .config-preview-box pre .cmt { color: var(--text-dim); }
+
+  /* Run button (config page) */
+  .start-btn-wrap { text-align: center; margin-top: 28px; margin-bottom: 20px; }
+  .start-btn {
+    padding: 14px 48px; background: linear-gradient(135deg, var(--accent), #1f6feb);
+    color: #fff; border: none; border-radius: 10px; font-size: 16px; font-weight: 600;
+    cursor: pointer; transition: all 0.2s; letter-spacing: 0.3px;
+    display: inline-flex; align-items: center; gap: 10px;
+  }
+  .start-btn:hover { filter: brightness(1.1); transform: translateY(-1px); box-shadow: 0 4px 20px #58a6ff33; }
+  .start-btn:active { transform: translateY(0); }
+
+  /* ===== EXECUTION PAGE ===== */
+  .exec-page { padding: 24px 32px; max-width: 1100px; margin: 0 auto; }
+  .exec-page h2 { font-size: 20px; font-weight: 600; margin-bottom: 4px; color: var(--text-bright); }
+
+  /* Back button */
+  .back-btn {
+    display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px;
+    background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+    color: var(--text-dim); font-size: 13px; cursor: pointer; transition: all 0.2s;
+    margin-bottom: 16px;
+  }
+  .back-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* Step progress */
+  .steps-container {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 24px; margin-bottom: 20px;
+  }
+  .steps-bar { display: flex; align-items: center; margin-bottom: 20px; }
+  .step-item {
+    display: flex; align-items: center; gap: 8px; flex: 1; position: relative;
+  }
+  .step-item:not(:last-child)::after {
+    content: ''; position: absolute; right: 0; top: 50%; width: calc(100% - 36px);
+    height: 2px; background: var(--border); transform: translate(50%, -50%); z-index: 0;
+  }
+  .step-item:not(:last-child).done::after { background: var(--step-done); }
+  .step-item:not(:last-child).active::after {
+    background: linear-gradient(90deg, var(--step-active), var(--border));
+  }
+  .step-circle {
+    width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 600; background: var(--bg); z-index: 1;
+    transition: all 0.3s; flex-shrink: 0;
+  }
+  .step-item.done .step-circle { background: var(--step-done); border-color: var(--step-done); color: #fff; }
+  .step-item.active .step-circle { background: var(--step-active); border-color: var(--step-active); color: #fff; animation: pulse 1.5s infinite; }
+  .step-item.error .step-circle { background: var(--step-error); border-color: var(--step-error); color: #fff; }
+  .step-label { font-size: 12px; color: var(--text-dim); white-space: nowrap; }
+  .step-item.done .step-label { color: var(--step-done); }
+  .step-item.active .step-label { color: var(--step-active); font-weight: 600; }
+  .step-item.error .step-label { color: var(--step-error); }
+
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(88,166,255,0.4); }
+    50% { box-shadow: 0 0 0 8px rgba(88,166,255,0); }
+  }
+
+  /* Progress bar */
+  .progress-wrap {
+    background: var(--bg); border-radius: 8px; height: 8px; overflow: hidden; margin-bottom: 12px;
+  }
+  .progress-bar {
+    height: 100%; border-radius: 8px; transition: width 0.5s ease;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+  }
+  .progress-bar.error { background: var(--danger); }
+  .progress-text { font-size: 13px; color: var(--text-dim); margin-bottom: 6px; }
+  .progress-text .current-step { color: var(--accent); font-weight: 600; }
+  .progress-text .pct { float: right; font-family: monospace; }
+
+  /* Log panel */
+  .log-panel {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 10px;
+    margin-bottom: 20px; overflow: hidden;
+  }
+  .log-header {
+    padding: 10px 16px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 13px; font-weight: 600; color: var(--text-dim);
+  }
+  .log-body {
+    padding: 14px 16px; max-height: 260px; overflow-y: auto;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace; font-size: 12px; line-height: 1.8;
+  }
+  .log-line { margin-bottom: 2px; }
+  .log-line .time { color: var(--text-dim); margin-right: 8px; }
+  .log-line .msg { color: var(--text); }
+  .log-line.info .msg { color: var(--text); }
+  .log-line.success .msg { color: var(--step-done); }
+  .log-line.warn .msg { color: var(--accent3); }
+  .log-line.error .msg { color: var(--danger); }
+  .log-line.step .msg { color: var(--accent); font-weight: 600; }
+
+  /* Results cards */
+  .results-section { margin-top: 20px; }
+  .results-section h3 { font-size: 16px; font-weight: 600; margin-bottom: 14px; color: var(--text-bright); }
+
+  .summary-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+  .summary-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 16px;
+  }
+  .summary-card .sc-label { font-size: 12px; color: var(--text-dim); margin-bottom: 4px; }
+  .summary-card .sc-value { font-size: 24px; font-weight: 700; }
+  .summary-card .sc-value.positive { color: var(--accent2); }
+  .summary-card .sc-value.negative { color: var(--danger); }
+
+  /* Timeline */
+  .timeline-bar { display: flex; height: 28px; border-radius: 6px; overflow: hidden; margin-bottom: 14px; }
+  .timeline-seg { min-width: 2px; transition: opacity 0.2s; }
+  .timeline-seg:hover { opacity: 0.8; }
+  .timeline-seg.hold { background: var(--accent2); }
+  .timeline-seg.empty { background: var(--border); }
+
+  /* Trade table */
+  .trade-table-wrap {
+    background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+    overflow: hidden;
+  }
+  .trade-table-header {
+    padding: 10px 16px; border-bottom: 1px solid var(--border); font-size: 13px;
+    font-weight: 600; color: var(--text-dim);
+  }
+  .trade-table {
+    width: 100%; border-collapse: collapse; font-size: 12px;
+  }
+  .trade-table th {
+    text-align: left; padding: 8px 12px; border-bottom: 2px solid var(--border);
+    font-size: 11px; color: var(--text-dim); font-weight: 600;
+  }
+  .trade-table td {
+    padding: 8px 12px; border-bottom: 1px solid var(--border);
+    font-family: 'JetBrains Mono', monospace; font-size: 12px;
+  }
+  .trade-table tr:hover { background: var(--hover); }
+  .positive { color: var(--accent2); }
+  .negative { color: var(--danger); }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+  .tab-btn {
+    padding: 8px 16px; font-size: 13px; cursor: pointer; border: none; background: transparent;
+    border-bottom: 2px solid transparent; color: var(--text-dim); transition: all 0.2s;
+  }
+  .tab-btn:hover { color: var(--text); }
+  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+
+  /* Stats grid */
+  .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+
+  /* Model detail panel */
+  .model-detail {
+    background: var(--card2); border: 1px solid var(--border); border-radius: 10px;
+    padding: 16px 20px; margin-top: 12px; display: none;
+  }
+  .model-detail.show { display: block; }
+  .model-detail h4 { font-size: 14px; font-weight: 600; color: var(--text-bright); margin-bottom: 8px; }
+  .model-detail .detail-row { display: flex; gap: 20px; font-size: 12px; margin-bottom: 4px; }
+  .model-detail .detail-label { color: var(--text-dim); min-width: 80px; }
+  .model-detail .detail-value { color: var(--text); }
+
+  .advice-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+  .advice-card {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 14px; font-size: 12px;
+  }
+  .advice-card .advice-title { font-weight: 600; color: var(--accent); margin-bottom: 4px; font-size: 11px; }
+  .advice-card .advice-text { color: var(--text-dim); line-height: 1.5; }
+
+  /* hidden */
+  .hidden { display: none !important; }
+
+  /* ===== SCAN PAGE ===== */
+  .scan-page { padding: 24px 32px; max-width: 1200px; margin: 0 auto; }
+  .scan-page h2 { font-size: 22px; font-weight: 600; margin-bottom: 6px; color: var(--text-bright); }
+  .scan-page .subtitle { color: var(--text-dim); font-size: 14px; margin-bottom: 24px; }
+
+  .scan-config-form {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 20px 24px; margin-bottom: 20px;
+  }
+  .scan-form-row { display: flex; gap: 16px; align-items: end; flex-wrap: wrap; }
+  .scan-form-row .field { flex: 1; min-width: 160px; }
+  .scan-form-row .field label { display: block; font-size: 12px; color: var(--text-dim); margin-bottom: 4px; }
+  .scan-form-row .field select,
+  .scan-form-row .field input {
+    width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--input-bg); color: var(--text); font-size: 14px;
+  }
+
+  .scan-style-btns { display: flex; gap: 8px; }
+  .scan-style-btn {
+    flex: 1; padding: 10px 16px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--card2); color: var(--text-dim); font-size: 13px; cursor: pointer;
+    text-align: center; transition: all 0.2s;
+  }
+  .scan-style-btn:hover { border-color: var(--accent); color: var(--text); }
+  .scan-style-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
+
+  .scan-start-btn {
+    padding: 10px 32px; border-radius: 8px; border: none; font-size: 14px; font-weight: 600;
+    background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #fff;
+    cursor: pointer; transition: transform 0.1s;
+  }
+  .scan-start-btn:hover { transform: translateY(-1px); }
+  .scan-start-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  /* Scan progress */
+  .scan-progress-section { margin-bottom: 20px; }
+  .scan-overall-bar {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 16px 20px; margin-bottom: 16px;
+  }
+  .scan-overall-header { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px; }
+  .scan-overall-header .scan-pct { color: var(--accent); font-weight: 600; }
+  .scan-bar-track {
+    height: 8px; background: var(--bg); border-radius: 4px; overflow: hidden;
+  }
+  .scan-bar-fill {
+    height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 4px; transition: width 0.5s;
+  }
+
+  .scan-model-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 8px; margin-bottom: 16px;
+  }
+  .scan-model-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 12px; font-size: 12px; transition: all 0.3s;
+  }
+  .scan-model-card .smc-name { font-weight: 600; color: var(--text-dim); margin-bottom: 2px; }
+  .scan-model-card .smc-desc { font-size: 10px; color: var(--text-dim); opacity: 0.6; line-height: 1.3; margin-bottom: 4px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .scan-model-card .smc-status { font-size: 11px; color: var(--text-dim); }
+  .scan-model-card.smc-pending { opacity: 0.5; }
+  .scan-model-card.smc-running { border-color: var(--accent); }
+  .scan-model-card.smc-running .smc-name { color: var(--accent); }
+  .scan-model-card.smc-completed { border-color: var(--accent2); }
+  .scan-model-card.smc-completed .smc-name { color: var(--accent2); }
+  .scan-model-card.smc-completed .smc-status { color: var(--accent2); }
+  .scan-model-card.smc-failed { border-color: var(--danger); }
+  .scan-model-card.smc-failed .smc-name { color: var(--danger); }
+  .scan-model-card.smc-failed .smc-status { color: var(--danger); }
+  .scan-model-card.smc-skipped { opacity: 0.4; }
+
+  /* Scan results */
+  .scan-results-section {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 20px 24px; margin-bottom: 20px;
+  }
+  .scan-best-card {
+    background: linear-gradient(135deg, rgba(63,185,80,0.1), rgba(88,166,255,0.1));
+    border: 2px solid var(--accent2); border-radius: 12px; padding: 20px;
+    text-align: center; margin-bottom: 20px;
+  }
+  .scan-best-card .best-label { font-size: 12px; color: var(--accent2); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+  .scan-best-card .best-model { font-size: 28px; font-weight: 700; color: var(--text-bright); }
+  .scan-best-card .best-stats { font-size: 14px; color: var(--text-dim); margin-top: 8px; }
+
+  .scan-rank-table { width: 100%; border-collapse: collapse; }
+  .scan-rank-table th {
+    text-align: left; padding: 8px 12px; font-size: 12px; color: var(--text-dim);
+    border-bottom: 1px solid var(--border); font-weight: 500;
+  }
+  .scan-rank-table td {
+    padding: 8px 12px; font-size: 13px; border-bottom: 1px solid var(--border);
+  }
+  .scan-rank-table tr:first-child td { color: var(--accent2); font-weight: 600; }
+  .scan-rank-table .rank-num { color: var(--text-dim); width: 40px; }
+
+  /* Prediction */
+  .scan-predict-section {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 20px 24px; margin-bottom: 20px;
+  }
+  .predict-signal-card {
+    text-align: center; padding: 20px; border-radius: 12px; margin-bottom: 16px;
+  }
+  .predict-signal-card.signal-buy { background: rgba(63,185,80,0.1); border: 2px solid var(--accent2); }
+  .predict-signal-card.signal-sell { background: rgba(248,81,73,0.1); border: 2px solid var(--danger); }
+  .predict-signal-card.signal-hold { background: rgba(210,153,34,0.1); border: 2px solid var(--accent3); }
+  .predict-signal-card .signal-label { font-size: 12px; color: var(--text-dim); margin-bottom: 4px; }
+  .predict-signal-card .signal-action { font-size: 32px; font-weight: 700; }
+  .predict-signal-card.signal-buy .signal-action { color: var(--accent2); }
+  .predict-signal-card.signal-sell .signal-action { color: var(--danger); }
+  .predict-signal-card.signal-hold .signal-action { color: var(--accent3); }
+  .predict-signal-card .signal-meta { font-size: 13px; color: var(--text-dim); margin-top: 8px; }
+
+  .predict-timeline { max-height: 300px; overflow-y: auto; }
+  .predict-row { display: flex; align-items: center; gap: 12px; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .predict-row .pr-date { color: var(--text-dim); min-width: 90px; }
+  .predict-row .pr-score { min-width: 80px; }
+  .predict-row .pr-signal { padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+  .predict-row .pr-signal.buy { background: rgba(63,185,80,0.15); color: var(--accent2); }
+  .predict-row .pr-signal.sell { background: rgba(248,81,73,0.15); color: var(--danger); }
+  .predict-row .pr-signal.hold { background: rgba(210,153,34,0.15); color: var(--accent3); }
+
+  /* Scan history */
+  .scan-history-section {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 20px 24px;
+  }
+  .scan-history-section h3 { font-size: 15px; font-weight: 600; color: var(--text-bright); margin-bottom: 12px; }
+  .scan-history-list { display: flex; flex-direction: column; gap: 8px; }
+  .scan-history-item {
+    display: flex; align-items: center; gap: 12px; padding: 10px 14px;
+    background: var(--card2); border: 1px solid var(--border); border-radius: 8px;
+    cursor: pointer; transition: border-color 0.2s; font-size: 13px;
+  }
+  .scan-history-item:hover { border-color: var(--accent); }
+  .shi-ticker { font-weight: 600; color: var(--text-bright); min-width: 60px; }
+  .shi-style { color: var(--text-dim); font-size: 12px; min-width: 50px; }
+  .shi-status { padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+  .shi-status.s-running { background: rgba(88,166,255,0.15); color: var(--accent); }
+  .shi-status.s-completed { background: rgba(63,185,80,0.15); color: var(--accent2); }
+  .shi-status.s-failed { background: rgba(248,81,73,0.15); color: var(--danger); }
+  .shi-best { color: var(--text-dim); font-size: 12px; margin-left: auto; }
+  .shi-time { color: var(--text-dim); font-size: 11px; }
+
+  /* ===== MOBILE: TABLET / LARGE PHONE (≤768px) ===== */
+  @media (max-width: 768px) {
+    /* iOS Safari: prevent auto-zoom on input focus (requires ≥16px) */
+    select, input[type="text"], input[type="number"], input[type="date"] {
+      font-size: 16px;
+    }
+    body { -webkit-text-size-adjust: 100%; }
+
+    .header { padding: 12px 16px; }
+    .header .status { display: none; }
+    .page-nav-btn { padding: 6px 10px; font-size: 12px; }
+
+    .config-page, .exec-page, .scan-page { padding: 16px; }
+    .config-section, .scan-config-form, .scan-results-section, .scan-predict-section, .scan-history-section { padding: 16px; }
+
+    .form-row-3 { grid-template-columns: 1fr 1fr; }
+    .form-row-3 > div:nth-child(3) { display: none; } /* hide duration hint column */
+
+    .summary-cards { grid-template-columns: 1fr 1fr; }
+    .advice-grid { grid-template-columns: 1fr; }
+
+    .trade-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .trade-table { min-width: 560px; }
+
+    .step-circle { width: 28px; height: 28px; font-size: 12px; }
+    .step-label { font-size: 11px; }
+
+    .model-detail .detail-row { flex-direction: column; gap: 2px; }
+    .model-detail .detail-label { min-width: unset; }
+
+    /* Model cards: 2 columns on tablet */
+    .model-cards { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .model-card .model-brief { display: none; }
+  }
+
+  /* ===== MOBILE: STANDARD PHONE (≤480px) ===== */
+  @media (max-width: 480px) {
+    .header { padding: 10px 12px; gap: 8px; flex-wrap: wrap; }
+    .header h1 { font-size: 15px; }
+    .header h1 svg { width: 18px; height: 18px; }
+    .page-nav { width: 100%; justify-content: center; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .page-nav-btn { flex: 0 0 auto; text-align: center; padding: 7px 10px; font-size: 12px; white-space: nowrap; }
+
+    .config-page, .exec-page, .scan-page { padding: 12px; }
+    .config-page h2 { font-size: 18px; }
+    .config-section { padding: 14px 12px; border-radius: 10px; overflow: hidden; }
+    .section-header h3 { font-size: 14px; }
+
+    .config-grid { gap: 14px; }
+
+    /* Forms: stack everything */
+    .form-row-3 { grid-template-columns: 1fr; gap: 8px; }
+    .form-row-3 > div:nth-child(3) { display: block; } /* re-show hint on own row */
+    .form-row-inline { grid-template-columns: 1fr; gap: 8px; }
+    .hp-grid { grid-template-columns: 1fr; }
+
+    /* Model cards: fixed 2 columns, no overflow */
+    .model-cards { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .model-card { padding: 8px 10px; }
+    .model-card .model-name { font-size: 12px; }
+    .model-card .model-brief { display: none; }
+    .model-card .model-tags { gap: 3px; }
+    .model-card .mtag { font-size: 8px; padding: 1px 4px; }
+
+    /* Category tabs: horizontal scroll instead of wrap */
+    .cat-tabs { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 4px; }
+    .cat-tab { white-space: nowrap; flex-shrink: 0; }
+
+    /* Steps bar: compact */
+    .steps-bar { flex-wrap: wrap; justify-content: center; gap: 6px; }
+    .step-item { flex: unset; }
+    .step-item:not(:last-child)::after { display: none; }
+    .step-circle { width: 24px; height: 24px; font-size: 11px; }
+    .step-label { display: none; }
+
+    .progress-text { font-size: 12px; }
+    .log-body { font-size: 11px; line-height: 1.7; max-height: 200px; }
+
+    /* Summary & stats */
+    .summary-cards { gap: 8px; }
+    .summary-card { padding: 12px; }
+    .summary-card .sc-value { font-size: 20px; }
+    .stats-grid { grid-template-columns: 1fr; }
+
+    /* Tables */
+    .trade-table { min-width: 520px; }
+    .trade-table th, .trade-table td { padding: 6px 8px; font-size: 11px; }
+
+    /* Timeline */
+    .timeline-bar { height: 22px; }
+
+    /* Tabs */
+    .tab-btn { padding: 8px 12px; font-size: 12px; }
+
+    /* Start button: full width */
+    .start-btn-wrap { margin-top: 20px; }
+    .start-btn { width: 100%; justify-content: center; padding: 14px; font-size: 15px; border-radius: 10px; }
+
+    /* Config preview */
+    .config-preview-box pre { font-size: 10px; line-height: 1.5; max-height: 200px; padding: 10px; }
+
+    /* Hints */
+    .hint-box { padding: 8px 10px; font-size: 11px; }
+
+    /* Feature pills */
+    .feature-pill { font-size: 11px; padding: 3px 8px; }
+    .feature-section { max-height: 140px; }
+
+    /* Back button */
+    .back-btn { padding: 6px 12px; font-size: 12px; }
+
+    /* Exec page title */
+    .exec-page h2 { font-size: 17px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== HEADER ===== -->
+<div class="header">
+  <h1>
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="url(#g1)" stroke-width="2">
+      <defs><linearGradient id="g1" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#58a6ff"/><stop offset="100%" stop-color="#3fb950"/>
+      </linearGradient></defs>
+      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+    </svg>
+    <span class="logo">AlphaScout</span>
+  </h1>
+  <div class="header-right">
+    <div class="page-nav">
+      <button class="page-nav-btn active" id="navConfig" onclick="goToPage('config')">Backtest</button>
+      <button class="page-nav-btn" id="navExec" onclick="goToPage('exec')">Run</button>
+      <button class="page-nav-btn" id="navQuick" onclick="goToPage('quick')" style="background:linear-gradient(135deg,#58a6ff,#3fb950);color:#fff">快速预测</button>
+      <button class="page-nav-btn" id="navScan" onclick="goToPage('scan')">Auto Scan</button>
+    </div>
+    <div class="status">
+      <div class="dot"></div>
+      <span>5,000+ Stocks | GPU: RTX PRO 6000</span>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================================ -->
+<!-- ===== PAGE 1: CONFIGURATION ===== -->
+<!-- ================================================================ -->
+<div class="page active" id="pageConfig">
+<div class="config-page">
+  <h2>回测参数配置</h2>
+  <p class="subtitle">选择模型、股票、策略和时间范围，完成后点击底部按钮开始回测</p>
+
+  <div class="config-grid">
+
+    <!-- ===== 1. 模型选择 ===== -->
+    <div class="config-section full-width">
+      <div class="section-header">
+        <div class="section-num">1</div>
+        <h3>选择模型</h3>
+        <span class="section-desc">点击选择一个模型，下方会显示详细说明</span>
+      </div>
+
+      <div class="cat-tabs" id="catTabs">
+        <button class="cat-tab active" data-cat="all" onclick="filterCat('all')">全部</button>
+        <button class="cat-tab" data-cat="tree" onclick="filterCat('tree')">树模型 (CPU)</button>
+        <button class="cat-tab" data-cat="rnn" onclick="filterCat('rnn')">循环神经网络</button>
+        <button class="cat-tab" data-cat="attention" onclick="filterCat('attention')">注意力/Transformer</button>
+        <button class="cat-tab" data-cat="other" onclick="filterCat('other')">其他深度学习</button>
+      </div>
+
+      <div class="model-cards" id="modelCards"></div>
+
+      <!-- Model Detail -->
+      <div class="model-detail" id="modelDetail"></div>
+    </div>
+
+    <!-- ===== 2. 超参数 ===== -->
+    <div class="config-section">
+      <div class="section-header">
+        <div class="section-num">2</div>
+        <h3>超参数设置</h3>
+      </div>
+      <div id="hpContent">
+        <p style="color:var(--text-dim);font-size:13px">请先在上方选择模型</p>
+      </div>
+    </div>
+
+    <!-- ===== 3. 特征集 ===== -->
+    <div class="config-section">
+      <div class="section-header">
+        <div class="section-num">3</div>
+        <h3>特征集</h3>
+      </div>
+      <div class="form-row">
+        <label>选择特征集</label>
+        <select id="featureSet" onchange="onFeatureSetChange()">
+          <option value="Alpha158">Alpha158 — 158个技术因子（推荐树模型）</option>
+          <option value="Alpha360">Alpha360 — 360个原始价格特征</option>
+          <option value="Alpha158_20">Alpha158 精选20个（推荐GRU/LSTM）</option>
+          <option value="custom">自定义选择...</option>
+        </select>
+      </div>
+      <div class="hint-box">
+        <strong>Alpha158</strong>：包含均线、波动率、动量、相关性等158个经典因子，适合树模型（LightGBM等）。<br>
+        <strong>Alpha158 精选20</strong>：从158个因子中筛选出与收益最相关的20个，适合RNN/GRU等序列模型（降低维度提高效率）。<br>
+        <strong>Alpha360</strong>：直接使用过去60天的OHLCV原始数据（6×60=360维），适合深度学习自动提取特征。
+      </div>
+      <div id="featureDetail" class="feature-section" style="display:none"></div>
+      <div id="tsOptions" style="display:none">
+        <div class="form-row" style="margin-top:10px">
+          <label>序列长度 (step_len)</label>
+          <input type="number" id="stepLen" value="20" min="5" max="60">
+          <div class="hint">时间序列模型的回望窗口天数。短线(5-10)，中线(20-30)，长线(40-60)</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== 4. 数据源 ===== -->
+    <div class="config-section">
+      <div class="section-header">
+        <div class="section-num">4</div>
+        <h3>数据源</h3>
+      </div>
+      <div class="form-row">
+        <label>数据来源</label>
+        <select id="dataSource">
+          <option value="db">stock_data.db（5,000+股，最新数据）</option>
+          <option value="yfinance">yfinance（625只SP500，2000-2026）</option>
+          <option value="baostock">baostock（690只沪深300，A股）</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label>K线周期</label>
+        <select id="klineInterval">
+          <option value="daily">日线 (1D)</option>
+          <option value="weekly">周线 (1W)</option>
+          <option value="60min">60分钟线</option>
+          <option value="30min">30分钟线</option>
+          <option value="15min">15分钟线</option>
+        </select>
+      </div>
+      <div class="hint">日线数据量最多、最稳定。分钟线数据仅stock_data.db支持（约4个月）。</div>
+    </div>
+
+    <!-- ===== 5. 目标股票 ===== -->
+    <div class="config-section">
+      <div class="section-header">
+        <div class="section-num">5</div>
+        <h3>目标股票</h3>
+      </div>
+      <div class="form-row ticker-search">
+        <label>输入股票代码（回车确认）</label>
+        <input type="text" id="tickerInput" placeholder="输入一个股票代码，如 INTC" onkeydown="if(event.key==='Enter')addTicker()">
+      </div>
+      <div class="ticker-tags" id="tickerTags"></div>
+      <div class="form-row" style="margin-top:10px">
+        <label>训练股票池</label>
+        <select id="trainingPool">
+          <option value="target_only" selected>仅目标股票本身（推荐，速度快）</option>
+          <option value="all">所有数据源中的股票（需训练期≥1年）</option>
+          <option value="sp500">标普500成分股</option>
+          <option value="volatile">波动/妖股池（15只）</option>
+          <option value="same_sector">与目标同行业</option>
+        </select>
+      </div>
+      <div class="hint">
+        训练池决定模型学习哪些股票的规律。大盘股建议用"标普500"，妖股/小盘股建议用"波动/妖股池"，
+        能让模型学到高波动股的模式。
+      </div>
+    </div>
+
+    <!-- ===== 6. 时间范围 ===== -->
+    <div class="config-section">
+      <div class="section-header">
+        <div class="section-num">6</div>
+        <h3>时间范围</h3>
+      </div>
+      <div class="form-row-3">
+        <div>
+          <label>训练集 开始</label>
+          <input type="date" id="trainStart" value="2025-02-05">
+        </div>
+        <div>
+          <label>训练集 结束</label>
+          <input type="date" id="trainEnd" value="2025-10-31">
+        </div>
+        <div style="display:flex;align-items:flex-end">
+          <div class="hint" style="margin:0;padding-bottom:8px">约 8 个月</div>
+        </div>
+      </div>
+      <div class="form-row-3">
+        <div>
+          <label>验证集 开始</label>
+          <input type="date" id="validStart" value="2025-11-01">
+        </div>
+        <div>
+          <label>验证集 结束</label>
+          <input type="date" id="validEnd" value="2025-12-31">
+        </div>
+        <div style="display:flex;align-items:flex-end">
+          <div class="hint" style="margin:0;padding-bottom:8px">约 2 个月</div>
+        </div>
+      </div>
+      <div class="form-row-3">
+        <div>
+          <label>测试集 开始</label>
+          <input type="date" id="testStart" value="2026-01-01">
+        </div>
+        <div>
+          <label>测试集 结束</label>
+          <input type="date" id="testEnd" value="2026-03-11">
+        </div>
+        <div style="display:flex;align-items:flex-end">
+          <div class="hint" style="margin:0;padding-bottom:8px">约 2.5 个月</div>
+        </div>
+      </div>
+      <div class="hint-box">
+        <strong>训练集</strong>：模型从这段数据学习规律。建议3-12个月。<br>
+        <strong>验证集</strong>：用于模型早停（防止过拟合），建议1-3个月。<br>
+        <strong>测试集</strong>：模型完全没见过的数据，用来评估真实表现。
+      </div>
+    </div>
+
+    <!-- ===== 7. 策略 ===== -->
+    <div class="config-section">
+      <div class="section-header">
+        <div class="section-num">7</div>
+        <h3>交易策略</h3>
+      </div>
+      <div class="form-row">
+        <label>策略类型</label>
+        <select id="strategyType" onchange="onStrategyChange()">
+          <option value="topk">TopkDropout — 组合选股（需要大量股票池，选排名最高的K只）</option>
+          <option value="threshold">信号阈值 — 单股择时（推荐1~3只股票时用）</option>
+        </select>
+      </div>
+      <div id="topkParams">
+        <div class="form-row-inline">
+          <div>
+            <label>Top K（持仓数量）</label>
+            <input type="number" id="topK" value="50">
+          </div>
+          <div>
+            <label>N Drop（每日换仓数）</label>
+            <input type="number" id="nDrop" value="5">
+          </div>
+        </div>
+        <div class="hint">每天从预测排名最高的K只股票中选股，每日更换N只。适合多股票组合。</div>
+      </div>
+      <div id="thresholdParams" style="display:none">
+        <div class="form-row">
+          <label>买入阈值</label>
+          <input type="number" id="buyThreshold" value="0" step="0.01">
+          <div class="hint">设为 <strong>0</strong> 时自动模式：每天将目标股票与所有股票比较，排名前50%时买入。这样无需猜测分数量级。手动设值则直接比较预测分数（量级约 ±0.01~0.03）。</div>
+        </div>
+      </div>
+      <div class="form-row" style="margin-top:10px">
+        <label>初始资金 ($)</label>
+        <input type="number" id="capital" value="100000">
+      </div>
+    </div>
+
+    <!-- ===== 8. 预测标签 ===== -->
+    <div class="config-section">
+      <div class="section-header">
+        <div class="section-num">8</div>
+        <h3>预测标签</h3>
+      </div>
+      <div class="form-row">
+        <label>预测目标</label>
+        <select id="labelType" onchange="onLabelChange()">
+          <option value="1d">次日收益率（默认，适合日频交易）</option>
+          <option value="5d">5日收益率（适合周频调仓）</option>
+          <option value="10d">10日收益率（适合中线持仓）</option>
+          <option value="20d">20日收益率（适合月频策略）</option>
+          <option value="custom">自定义表达式...</option>
+        </select>
+      </div>
+      <div id="labelExpr" style="display:none; margin-top:8px">
+        <input type="text" id="customLabel" placeholder="Ref($close, -2)/Ref($close, -1) - 1" value="Ref($close, -2)/Ref($close, -1) - 1">
+      </div>
+      <div class="hint" id="labelDesc">表达式: Ref($close, -2)/Ref($close, -1) - 1</div>
+      <div class="hint-box" style="margin-top:10px">
+        预测标签决定模型学习"预测什么"。<strong>1d</strong>适合短线高频；<strong>5d-10d</strong>适合波段；<strong>20d</strong>适合月度调仓。
+        标签越长，模型越关注趋势而非噪声。
+      </div>
+    </div>
+
+    <!-- ===== Config Preview ===== -->
+    <div class="config-section full-width">
+      <div class="section-header">
+        <div class="section-num" style="background:var(--accent2)">P</div>
+        <h3>配置预览</h3>
+        <span class="section-desc">实时生成的回测配置</span>
+      </div>
+      <div class="config-preview-box">
+        <div class="preview-title">qlib_config.yaml</div>
+        <pre id="configPreview"></pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- START BUTTON -->
+  <div class="start-btn-wrap">
+    <button class="start-btn" onclick="startBacktest()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+      开始回测
+    </button>
+  </div>
+</div>
+</div>
+
+<!-- ================================================================ -->
+<!-- ===== PAGE 2: EXECUTION ===== -->
+<!-- ================================================================ -->
+<div class="page" id="pageExec">
+<div class="exec-page">
+
+  <button class="back-btn" onclick="goToPage('config')">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+    返回配置页
+  </button>
+
+  <h2 id="execTitle">回测运行中</h2>
+  <p style="color:var(--text-dim);font-size:14px;margin-bottom:20px" id="execSubtitle">正在执行回测任务，请耐心等待...</p>
+
+  <!-- Steps -->
+  <div class="steps-container">
+    <div class="steps-bar" id="stepsBar">
+      <div class="step-item" id="step0">
+        <div class="step-circle">1</div>
+        <div class="step-label">准备数据</div>
+      </div>
+      <div class="step-item" id="step1">
+        <div class="step-circle">2</div>
+        <div class="step-label">加载特征</div>
+      </div>
+      <div class="step-item" id="step2">
+        <div class="step-circle">3</div>
+        <div class="step-label">训练模型</div>
+      </div>
+      <div class="step-item" id="step3">
+        <div class="step-circle">4</div>
+        <div class="step-label">模型预测</div>
+      </div>
+      <div class="step-item" id="step4">
+        <div class="step-circle">5</div>
+        <div class="step-label">回测交易</div>
+      </div>
+      <div class="step-item" id="step5">
+        <div class="step-circle">6</div>
+        <div class="step-label">生成报告</div>
+      </div>
+    </div>
+
+    <!-- Progress -->
+    <div class="progress-text">
+      <span class="current-step" id="currentStepText">准备中...</span>
+      <span class="pct" id="pctText">0%</span>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-bar" id="progressBar" style="width:0%"></div>
+    </div>
+  </div>
+
+  <!-- Log -->
+  <div class="log-panel">
+    <div class="log-header">
+      <span>运行日志</span>
+      <span style="font-size:11px" id="logCount">0 条</span>
+    </div>
+    <div class="log-body" id="logBody"></div>
+  </div>
+
+  <!-- Results (hidden until done) -->
+  <div class="results-section hidden" id="resultsSection">
+    <h3>回测结果</h3>
+
+    <div class="summary-cards" id="summaryCards">
+      <div class="summary-card">
+        <div class="sc-label">模型收益</div>
+        <div class="sc-value" id="rModelReturn">--</div>
+      </div>
+      <div class="summary-card">
+        <div class="sc-label">买入持有收益</div>
+        <div class="sc-value" id="rBhReturn">--</div>
+      </div>
+      <div class="summary-card">
+        <div class="sc-label">胜率</div>
+        <div class="sc-value" id="rWinRate">--</div>
+      </div>
+      <div class="summary-card">
+        <div class="sc-label">交易次数</div>
+        <div class="sc-value" id="rTotalTrades">--</div>
+      </div>
+    </div>
+
+    <!-- Timeline -->
+    <div style="margin-bottom:16px">
+      <label style="margin-bottom:8px">持仓时间线（绿色 = 持仓, 灰色 = 空仓）</label>
+      <div class="timeline-bar" id="timelineBar"></div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchResultTab(this,'tradesPanel')">交易记录</button>
+      <button class="tab-btn" onclick="switchResultTab(this,'segmentsPanel')">持仓区间</button>
+      <button class="tab-btn" onclick="switchResultTab(this,'statsPanel')">统计信息</button>
+    </div>
+
+    <!-- Trades -->
+    <div id="tradesPanel">
+      <div class="trade-table-wrap">
+        <div class="trade-table-header">交易明细</div>
+        <table class="trade-table">
+          <thead><tr>
+            <th>股票</th><th>买入日期</th><th>买入价</th><th>卖出日期</th><th>卖出价</th><th>持仓天数</th><th>收益率</th>
+          </tr></thead>
+          <tbody id="tradeTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Segments -->
+    <div id="segmentsPanel" style="display:none">
+      <div class="trade-table-wrap">
+        <div class="trade-table-header">所有持仓/空仓区间</div>
+        <table class="trade-table">
+          <thead><tr>
+            <th>股票</th><th>类型</th><th>开始</th><th>结束</th><th>起始价</th><th>结束价</th><th>天数</th><th>变化</th>
+          </tr></thead>
+          <tbody id="segmentTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div id="statsPanel" style="display:none">
+      <div class="stats-grid">
+        <div class="summary-card">
+          <div class="sc-label">持仓统计</div>
+          <div id="holdingStats" style="font-size:13px; margin-top:8px"></div>
+        </div>
+        <div class="summary-card">
+          <div class="sc-label">空仓统计</div>
+          <div id="emptyStats" style="font-size:13px; margin-top:8px"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- ================================================================ -->
+<!-- ===== PAGE 3: AUTO SCAN ===== -->
+<!-- ================================================================ -->
+<div class="page" id="pageScan">
+<div class="scan-page">
+
+  <h2>自动模型扫描</h2>
+  <p class="subtitle">输入股票代码，自动遍历全部模型，找到最优策略并预测未来操作</p>
+
+  <!-- Scan Config Form -->
+  <div class="scan-config-form" id="scanConfigForm">
+    <div class="scan-form-row">
+      <div class="field">
+        <label>股票代码</label>
+        <input type="text" id="scanTicker" placeholder="如 AAPL、MSFT" value="AAPL">
+      </div>
+      <div class="field">
+        <label>数据源</label>
+        <select id="scanDataSource">
+          <option value="db">本地数据库 (5,000+股)</option>
+          <option value="yfinance">Yahoo Finance</option>
+          <option value="baostock">Baostock (A股)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>交易风格</label>
+        <div class="scan-style-btns">
+          <div class="scan-style-btn active" data-style="ultra_short" onclick="selectScanStyle(this)">超短线</div>
+          <div class="scan-style-btn" data-style="swing" onclick="selectScanStyle(this)">波段</div>
+        </div>
+        <div class="scan-style-hint" id="scanStyleHint" style="font-size:11px;color:var(--text-dim);margin-top:6px;line-height:1.5">
+          超短线：持仓 1-2 天，用近 6 个月数据训练
+        </div>
+      </div>
+      <div class="field" style="flex:0 0 auto;">
+        <label>&nbsp;</label>
+        <button class="scan-start-btn" id="scanStartBtn" onclick="startScan()">开始扫描</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scan Progress -->
+  <div class="scan-progress-section hidden" id="scanProgressSection">
+    <div class="scan-overall-bar">
+      <div class="scan-overall-header">
+        <span id="scanProgressLabel">准备中...</span>
+        <span class="scan-pct" id="scanPctText">0%</span>
+      </div>
+      <div class="scan-bar-track">
+        <div class="scan-bar-fill" id="scanBarFill" style="width:0%"></div>
+      </div>
+    </div>
+    <div class="scan-model-grid" id="scanModelGrid"></div>
+    <div class="log-container" style="margin-top:10px">
+      <div class="log-header" style="font-size:12px;color:var(--text-dim);margin-bottom:6px">扫描日志</div>
+      <div class="log-body" id="scanLogBody" style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px;max-height:200px;overflow-y:auto;font-family:monospace;font-size:11px;line-height:1.7"></div>
+    </div>
+  </div>
+
+  <!-- Scan Results -->
+  <div class="scan-results-section hidden" id="scanResultsSection">
+    <h3 style="font-size:16px;font-weight:600;color:var(--text-bright);margin-bottom:16px">扫描结果</h3>
+    <!-- Training period info -->
+    <div class="scan-info-banner" id="scanInfoBanner" style="display:none;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:14px 18px;margin-bottom:14px;font-size:13px;color:var(--text-dim);line-height:1.7">
+    </div>
+    <div style="display:flex;gap:16px;align-items:stretch;flex-wrap:wrap;margin-bottom:4px">
+      <div class="scan-best-card" id="scanBestCard" style="flex:1;min-width:200px;margin-bottom:0">
+        <div class="best-label">最优模型</div>
+        <div class="best-model" id="scanBestModel">-</div>
+        <div class="best-stats" id="scanBestStats"></div>
+      </div>
+      <div id="alphaScoreCard" style="display:none;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px 28px;text-align:center;min-width:160px">
+        <div style="font-size:11px;color:var(--text-dim);font-weight:600;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">AlphaScore</div>
+        <div id="alphaScoreRing" style="width:72px;height:72px;margin:0 auto;position:relative">
+          <svg viewBox="0 0 100 100" style="width:100%;height:100%;transform:rotate(-90deg)">
+            <circle cx="50" cy="50" r="42" fill="none" stroke="var(--border)" stroke-width="8"/>
+            <circle id="alphaScoreArc" cx="50" cy="50" r="42" fill="none" stroke-width="8" stroke-linecap="round" stroke-dasharray="264" stroke-dashoffset="264" style="transition:stroke-dashoffset .8s ease"/>
+          </svg>
+          <div id="alphaScoreNum" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:900;color:var(--text-bright)">-</div>
+        </div>
+        <div id="alphaScoreLabel" style="font-size:14px;font-weight:700;margin-top:6px">-</div>
+        <div id="alphaScoreReason" style="font-size:11px;color:var(--text-dim);margin-top:2px;line-height:1.4"></div>
+      </div>
+    </div>
+    <!-- Column legend -->
+    <div style="font-size:12px;color:var(--text-dim);line-height:1.8;margin:12px 0 8px;padding:10px 14px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px">
+      <strong style="color:var(--text-secondary)">指标说明：</strong>
+      <b style="color:var(--text-secondary)">模型收益</b> = 模型发出买卖信号所产生的测试期累计收益 &nbsp;
+      <b style="color:var(--text-secondary)">持有收益</b> = 同期买入持有的实际涨跌幅（基准对照） &nbsp;
+      <b style="color:var(--text-secondary)">超额收益</b> = 模型收益 − 持有收益，正数表示跑赢大盘 &nbsp;
+      <b style="color:var(--text-secondary)">胜率</b> = 盈利笔数 / 总笔数 &nbsp;
+      <b style="color:var(--text-secondary)">交易数</b> = 测试期内触发的买卖总数
+      <br><strong style="color:var(--text-secondary)">排名规则：</strong>按模型收益从高到低排列，收益相同时按胜率排列。排名第一即为最优模型。
+    </div>
+    <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+      <table class="scan-rank-table" id="scanRankTable">
+        <thead><tr>
+          <th class="rank-num">#</th><th>模型</th><th>模型收益</th><th>持有收益</th><th>超额收益</th><th>胜率</th><th>交易数</th><th>耗时</th><th>状态</th>
+        </tr></thead>
+        <tbody id="scanRankBody"></tbody>
+      </table>
+    </div>
+    <div style="margin-top:16px;text-align:center">
+      <button class="scan-start-btn" id="scanPredictBtn" onclick="runPrediction()">预测未来操作</button>
+    </div>
+  </div>
+
+  <!-- Prediction -->
+  <div class="scan-predict-section hidden" id="scanPredictSection">
+    <h3 style="font-size:16px;font-weight:600;color:var(--text-bright);margin-bottom:4px">AI 预测结果</h3>
+    <p style="font-size:12px;color:var(--text-dim);margin-bottom:16px">最优模型基于最新数据给出的操作建议（仅供参考，不构成投资建议）</p>
+    <div id="scanPredictCard"></div>
+    <h4 style="font-size:13px;color:var(--text-dim);margin:16px 0 8px">近期每日信号</h4>
+    <div class="predict-timeline" id="scanPredictTimeline"></div>
+  </div>
+
+  <!-- Scan History -->
+  <div class="scan-history-section" id="scanHistorySection">
+    <h3>扫描历史</h3>
+    <div class="scan-history-list" id="scanHistoryList">
+      <div style="color:var(--text-dim);font-size:13px;padding:10px 0">暂无历史记录</div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- ===== PAGE 4: QUICK PREDICT ===== -->
+<div class="page" id="pageQuick">
+<div class="scan-page">
+  <h2 style="display:flex;align-items:center;gap:10px">
+    <span style="font-size:24px">&#9889;</span> 快速预测
+  </h2>
+  <p class="subtitle">使用预训练AI模型即时预测股票走势 — 无需等待训练</p>
+
+  <div class="scan-config-form" id="quickConfigForm">
+    <div class="scan-form-row">
+      <div class="field">
+        <label>股票代码</label>
+        <input type="text" id="quickTicker" placeholder="例如 AAPL, MSFT, TSLA" value="AAPL">
+      </div>
+      <div class="field">
+        <label>交易风格</label>
+        <div class="scan-style-btns">
+          <div class="scan-style-btn active" data-style="ultra_short" onclick="selectQuickStyle(this)">超短线</div>
+          <div class="scan-style-btn" data-style="swing" onclick="selectQuickStyle(this)">波段</div>
+        </div>
+      </div>
+      <div class="field" style="flex:0 0 auto;">
+        <label>&nbsp;</label>
+        <button class="scan-start-btn" id="quickPredictBtn" onclick="runQuickPredict()" style="background:linear-gradient(135deg,#58a6ff,#3fb950)">
+          立即预测
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="hidden" id="quickResultSection" style="margin-top:24px">
+    <div class="summary-cards" id="quickSummaryCards">
+      <div class="summary-card" style="flex:1.5">
+        <div class="sc-label">信号</div>
+        <div class="sc-value" id="qSignal" style="font-size:24px">--</div>
+      </div>
+      <div class="summary-card">
+        <div class="sc-label">最新分数</div>
+        <div class="sc-value" id="qScore">--</div>
+      </div>
+      <div class="summary-card">
+        <div class="sc-label">阈值</div>
+        <div class="sc-value" id="qThreshold">--</div>
+      </div>
+      <div class="summary-card">
+        <div class="sc-label">使用模型</div>
+        <div class="sc-value" id="qModel" style="font-size:14px">--</div>
+      </div>
+    </div>
+
+    <div style="margin-top:16px">
+      <div class="trade-table-wrap">
+        <div class="trade-table-header">近期预测信号（最近60天）</div>
+        <table class="trade-table">
+          <thead><tr>
+            <th>日期</th><th>分数</th><th>信号</th>
+          </tr></thead>
+          <tbody id="quickSignalTable"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div style="margin-top:12px;text-align:center;">
+      <span id="qCacheInfo" style="font-size:11px;color:var(--text-dim)"></span>
+    </div>
+
+    <div style="margin-top:16px;text-align:center">
+      <button class="scan-start-btn" onclick="goToPage('scan')" style="background:var(--card2);border:1px solid var(--border);">
+        需要更深入分析？运行完整扫描
+      </button>
+    </div>
+  </div>
+
+  <div class="hidden" id="quickErrorSection" style="margin-top:24px;padding:16px;background:rgba(248,81,73,0.1);border:1px solid var(--danger);border-radius:8px">
+    <div style="color:var(--danger);font-weight:600;margin-bottom:8px">预测不可用</div>
+    <div id="quickErrorMsg" style="font-size:13px;color:var(--text-dim)"></div>
+    <div style="margin-top:12px;font-size:12px;color:var(--text-dim)">
+      预训练模型需要先初始化。请联系管理员或尝试使用自动扫描。
+    </div>
+  </div>
+
+</div>
+</div>
+
+<script>
+// ===== MODEL DATABASE =====
+const MODELS = {
+  LGBModel: {
+    name: 'LGBModel', fullName: 'LightGBM', cat: 'tree',
+    brief: '梯度提升树，速度快，最常用',
+    desc: 'LightGBM 是微软开发的梯度提升决策树框架。训练速度极快，不需要GPU，是Qlib中最成熟的基线模型。',
+    scene: '通用场景。大盘蓝筹、指数成分股等波动稳定的标的表现最好。',
+    period: '中短线（日频、周频）',
+    stockType: '大盘股、蓝筹股',
+    tags: [['CPU','cpu'],['表格数据','flat']],
+    module: 'qlib.contrib.model.gbdt', dataType: 'flat',
+    params: [
+      { key: 'learning_rate', default: 0.0421, step: 0.001, hint: '越小学得越慢但更精细' },
+      { key: 'max_depth', default: 8, step: 1, hint: '树的最大深度，越大越容易过拟合' },
+      { key: 'num_leaves', default: 210, step: 1, hint: '叶子节点数，越多模型越复杂' },
+      { key: 'lambda_l1', default: 205.7, step: 0.1, hint: 'L1正则化，越大越保守' },
+      { key: 'lambda_l2', default: 580.98, step: 0.1, hint: 'L2正则化，防止过拟合' },
+      { key: 'subsample', default: 0.88, step: 0.01, hint: '每棵树使用的数据比例' },
+    ]
+  },
+  XGBModel: {
+    name: 'XGBModel', fullName: 'XGBoost', cat: 'tree',
+    brief: '经典梯度提升树，功能全面',
+    desc: 'XGBoost 是最广泛使用的梯度提升框架，比LightGBM略慢但参数调优更灵活。',
+    scene: '与LightGBM类似，适合结构化数据。在特征工程充分时表现优异。',
+    period: '中短线', stockType: '大盘股、蓝筹股',
+    tags: [['CPU','cpu'],['表格数据','flat']],
+    module: 'qlib.contrib.model.xgboost', dataType: 'flat',
+    params: [
+      { key: 'eta', default: 0.1, step: 0.01, hint: '学习率' },
+      { key: 'max_depth', default: 6, step: 1, hint: '树深度' },
+      { key: 'subsample', default: 0.8, step: 0.05, hint: '数据采样比例' },
+      { key: 'colsample_bytree', default: 0.8, step: 0.05, hint: '特征采样比例' },
+      { key: 'lambda', default: 1.0, step: 0.1, hint: 'L2正则化' },
+    ]
+  },
+  CatBoostModel: {
+    name: 'CatBoostModel', fullName: 'CatBoost', cat: 'tree',
+    brief: '处理类别特征强，抗过拟合',
+    desc: 'CatBoost由Yandex开发，特点是对类别型特征处理好，自带正则化抗过拟合。',
+    scene: '有类别型特征（行业、板块）的场景，或训练数据不太多时抗过拟合好。',
+    period: '中短线', stockType: '通用',
+    tags: [['CPU','cpu'],['表格数据','flat']],
+    module: 'qlib.contrib.model.catboost_model', dataType: 'flat',
+    params: [
+      { key: 'learning_rate', default: 0.03, step: 0.001, hint: '学习率' },
+      { key: 'depth', default: 6, step: 1, hint: '树深度' },
+      { key: 'iterations', default: 1000, step: 100, hint: '迭代次数' },
+      { key: 'l2_leaf_reg', default: 3.0, step: 0.1, hint: 'L2正则化系数' },
+    ]
+  },
+  LinearModel: {
+    name: 'LinearModel', fullName: '线性模型', cat: 'tree',
+    brief: '最简单的基线，速度最快',
+    desc: '线性回归模型，包括OLS、Ridge、Lasso等。作为基线参考，如果深度模型还不如它，说明数据有问题。',
+    scene: '快速验证、基线对比。如果线性模型就能work，说明特征工程做得好。',
+    period: '通用', stockType: '通用',
+    tags: [['CPU','cpu'],['表格数据','flat']],
+    module: 'qlib.contrib.model.linear', dataType: 'flat',
+    params: [
+      { key: 'estimator', default: 'ols', type: 'select', options: ['ols','ridge','lasso'], hint: 'ols=普通最小二乘, ridge=L2正则, lasso=L1正则' },
+    ]
+  },
+  DEnsembleModel: {
+    name: 'DEnsembleModel', fullName: 'Double Ensemble', cat: 'tree',
+    brief: '双重集成，关注困难样本',
+    desc: '双重集成模型，一边关注难以预测的样本，一边关注重要特征。比单一树模型更鲁棒。',
+    scene: '数据噪声大、市场波动剧烈的场景。比单模型更稳定。',
+    period: '中线', stockType: '通用',
+    tags: [['CPU','cpu'],['表格数据','flat']],
+    module: 'qlib.contrib.model.double_ensemble', dataType: 'flat',
+    params: [
+      { key: 'num_models', default: 6, step: 1, hint: '集成的子模型数量' },
+      { key: 'epochs', default: 100, step: 10, hint: '训练轮数' },
+    ]
+  },
+
+  // ===== RNN =====
+  GRU_ts: {
+    name: 'GRU_ts', fullName: 'GRU (时间序列)', cat: 'rnn',
+    brief: '轻量RNN，训练快，适合波动股',
+    desc: 'GRU（门控循环单元）是简化版LSTM，参数更少训练更快。时间序列版本使用滑动窗口输入。',
+    scene: '中小盘股、妖股等波动大的标的。GRU比LSTM更不容易过拟合小数据集。',
+    period: '短线（日频）', stockType: '中小盘、妖股、波动股',
+    tags: [['GPU','gpu'],['时间序列','ts'],['短线','short'],['妖股','meme']],
+    module: 'qlib.contrib.model.pytorch_gru_ts', dataType: 'ts',
+    params: null
+  },
+  GRU_flat: {
+    name: 'GRU_flat', fullName: 'GRU (截面)', cat: 'rnn',
+    brief: 'GRU截面版，输入当天特征',
+    desc: 'GRU的截面版本，只输入当天的特征向量，不使用历史滑动窗口。训练更快但可能丢失时序信息。',
+    scene: '快速实验、特征已充分包含时序信息时。',
+    period: '短线', stockType: '通用',
+    tags: [['GPU','gpu'],['截面数据','flat']],
+    module: 'qlib.contrib.model.pytorch_gru', dataType: 'flat',
+    params: null
+  },
+  LSTM_ts: {
+    name: 'LSTM_ts', fullName: 'LSTM (时间序列)', cat: 'rnn',
+    brief: '经典RNN，长期记忆能力强',
+    desc: 'LSTM（长短期记忆）比GRU多一个遗忘门，理论上更擅长捕捉长期依赖。但参数更多，需要更多数据。',
+    scene: '数据量充足（>1年）时效果好。适合趋势性强的标的（大盘ETF、指数）。',
+    period: '中线（周频或多日持仓）', stockType: '大盘股、趋势股',
+    tags: [['GPU','gpu'],['时间序列','ts'],['中线','mid']],
+    module: 'qlib.contrib.model.pytorch_lstm_ts', dataType: 'ts',
+    params: null
+  },
+  LSTM_flat: {
+    name: 'LSTM_flat', fullName: 'LSTM (截面)', cat: 'rnn',
+    brief: 'LSTM截面版',
+    desc: 'LSTM截面版本，不使用滑动窗口。',
+    scene: '同GRU_flat，快速实验用。',
+    period: '中短线', stockType: '通用',
+    tags: [['GPU','gpu'],['截面数据','flat']],
+    module: 'qlib.contrib.model.pytorch_lstm', dataType: 'flat',
+    params: null
+  },
+  ALSTM_ts: {
+    name: 'ALSTM_ts', fullName: 'ALSTM (注意力LSTM)', cat: 'rnn',
+    brief: '加注意力的LSTM，关注重要时刻',
+    desc: 'ALSTM在LSTM上加了注意力机制，能自动关注序列中最重要的时间步。效果通常比纯LSTM好。',
+    scene: '数据充足时的改进版LSTM。适合有明显事件驱动的股票（财报、消息面敏感的）。',
+    period: '中线', stockType: '事件驱动型股票',
+    tags: [['GPU','gpu'],['时间序列','ts'],['中线','mid']],
+    module: 'qlib.contrib.model.pytorch_alstm_ts', dataType: 'ts',
+    params: null
+  },
+  ALSTM_flat: {
+    name: 'ALSTM_flat', fullName: 'ALSTM (截面)', cat: 'rnn',
+    brief: '注意力LSTM截面版',
+    desc: 'ALSTM截面版本。',
+    scene: '快速实验。',
+    period: '中短线', stockType: '通用',
+    tags: [['GPU','gpu'],['截面数据','flat']],
+    module: 'qlib.contrib.model.pytorch_alstm', dataType: 'flat',
+    params: null
+  },
+  ADARNN: {
+    name: 'ADARNN', fullName: 'AdaRNN (自适应RNN)', cat: 'rnn',
+    brief: '自适应不同市场环境',
+    desc: 'AdaRNN通过自适应地调节隐状态分布来应对时间序列的分布偏移问题（市场风格切换）。',
+    scene: '市场风格频繁切换的情况（如牛转熊、板块轮动）。',
+    period: '中线', stockType: '通用',
+    tags: [['GPU','gpu'],['截面数据','flat'],['中线','mid']],
+    module: 'qlib.contrib.model.pytorch_adarnn', dataType: 'flat',
+    params: null
+  },
+
+  // ===== Attention =====
+  Transformer_ts: {
+    name: 'Transformer_ts', fullName: 'Transformer (时间序列)', cat: 'attention',
+    brief: '自注意力机制，并行计算快',
+    desc: 'Transformer用自注意力取代循环结构，能并行处理序列。理论上能建模更复杂的时序关系。',
+    scene: '数据量大时（>2年日频）效果好。小数据容易过拟合。',
+    period: '中线', stockType: '大盘股、指数',
+    tags: [['GPU','gpu'],['时间序列','ts'],['大盘股','large']],
+    module: 'qlib.contrib.model.pytorch_transformer_ts', dataType: 'ts',
+    params: null
+  },
+  Transformer_flat: {
+    name: 'Transformer_flat', fullName: 'Transformer (截面)', cat: 'attention',
+    brief: 'Transformer截面版',
+    desc: 'Transformer截面版本。',
+    scene: '快速实验。',
+    period: '中短线', stockType: '通用',
+    tags: [['GPU','gpu'],['截面数据','flat']],
+    module: 'qlib.contrib.model.pytorch_transformer', dataType: 'flat',
+    params: null
+  },
+  LocalFormer_ts: {
+    name: 'LocalFormer_ts', fullName: 'LocalFormer', cat: 'attention',
+    brief: '局部注意力，关注近期数据',
+    desc: 'LocalFormer结合了局部卷积和全局注意力，既能捕捉近期模式又能关注长期趋势。',
+    scene: '短线+中线结合的策略。对近期数据更敏感。',
+    period: '短中线', stockType: '通用',
+    tags: [['GPU','gpu'],['时间序列','ts'],['短线','short']],
+    module: 'qlib.contrib.model.pytorch_localformer_ts', dataType: 'ts',
+    params: null
+  },
+  GATs_ts: {
+    name: 'GATs_ts', fullName: 'GATs (图注意力)', cat: 'attention',
+    brief: '图网络建模股票关联关系',
+    desc: '图注意力网络（GATs）能建模股票之间的关联关系（如同行业、供应链）。通过图结构传递信息。',
+    scene: '多股票组合策略。能利用行业联动、板块轮动等关系。',
+    period: '中线', stockType: '组合/多股',
+    tags: [['GPU','gpu'],['时间序列','ts'],['大盘股','large']],
+    module: 'qlib.contrib.model.pytorch_gats_ts', dataType: 'ts',
+    params: null
+  },
+  GATs_flat: {
+    name: 'GATs_flat', fullName: 'GATs (截面)', cat: 'attention',
+    brief: '图注意力截面版',
+    desc: 'GATs截面版本。',
+    scene: '组合策略快速实验。',
+    period: '中短线', stockType: '组合/多股',
+    tags: [['GPU','gpu'],['截面数据','flat']],
+    module: 'qlib.contrib.model.pytorch_gats', dataType: 'flat',
+    params: null
+  },
+  TRAModel: {
+    name: 'TRAModel', fullName: 'TRA (时序路由)', cat: 'attention',
+    brief: '多路径选择，适应市场变化',
+    desc: 'TRA（Temporal Routing Adaptor）维护多个预测头，根据市场环境动态选择最合适的预测路径。',
+    scene: '市场环境变化大时表现好（能自适应切换策略）。',
+    period: '中线', stockType: '通用',
+    tags: [['GPU','gpu'],['时间序列','ts'],['中线','mid']],
+    module: 'qlib.contrib.model.pytorch_tra', dataType: 'ts',
+    params: null
+  },
+
+  // ===== Other =====
+  TCN_ts: {
+    name: 'TCN_ts', fullName: 'TCN (时间卷积网络)', cat: 'other',
+    brief: '因果卷积，计算效率高',
+    desc: '时间卷积网络（TCN）用因果膨胀卷积处理序列，比RNN训练更快且能并行。',
+    scene: '计算资源有限但想用深度学习时。速度快，效果接近RNN。',
+    period: '短线', stockType: '通用',
+    tags: [['GPU','gpu'],['时间序列','ts'],['短线','short']],
+    module: 'qlib.contrib.model.pytorch_tcn_ts', dataType: 'ts',
+    params: null
+  },
+  TCN_flat: {
+    name: 'TCN_flat', fullName: 'TCN (截面)', cat: 'other',
+    brief: 'TCN截面版',
+    desc: 'TCN截面版本。',
+    scene: '快速实验。',
+    period: '短线', stockType: '通用',
+    tags: [['GPU','gpu'],['截面数据','flat']],
+    module: 'qlib.contrib.model.pytorch_tcn', dataType: 'flat',
+    params: null
+  },
+  TabnetModel: {
+    name: 'TabnetModel', fullName: 'TabNet', cat: 'other',
+    brief: '注意力选特征，可解释性好',
+    desc: 'TabNet用注意力机制自动选择特征，兼具深度学习的性能和树模型的可解释性。',
+    scene: '想知道模型关注哪些因子时。可解释性需求高的场景。',
+    period: '中线', stockType: '通用',
+    tags: [['GPU','gpu'],['截面数据','flat'],['中线','mid']],
+    module: 'qlib.contrib.model.pytorch_tabnet', dataType: 'flat',
+    params: null
+  },
+  HIST: {
+    name: 'HIST', fullName: 'HIST (层次化信息)', cat: 'other',
+    brief: '利用共享信息和独有信息',
+    desc: 'HIST把股票特征分解为"概念共享"（如同行业）和"个股独有"两部分，分别建模。',
+    scene: '多股票组合。能利用行业信息提升预测精度。',
+    period: '中线', stockType: '组合/多股',
+    tags: [['GPU','gpu'],['截面数据','flat'],['大盘股','large']],
+    module: 'qlib.contrib.model.pytorch_hist', dataType: 'flat',
+    params: null
+  },
+  SFM: {
+    name: 'SFM', fullName: 'SFM (频域分解)', cat: 'other',
+    brief: '频域分析捕捉多周期模式',
+    desc: 'SFM（State Frequency Memory）在频域上分解时间序列，能同时捕捉不同频率的周期模式。',
+    scene: '有明显周期性的标的（如季节性强的行业）。',
+    period: '中长线', stockType: '周期股',
+    tags: [['GPU','gpu'],['截面数据','flat'],['中线','mid']],
+    module: 'qlib.contrib.model.pytorch_sfm', dataType: 'flat',
+    params: null
+  },
+  DNNModelPytorch: {
+    name: 'DNNModelPytorch', fullName: 'DNN (深度神经网络)', cat: 'other',
+    brief: '全连接网络，简单直接',
+    desc: '标准的多层全连接神经网络。作为深度学习的基线。',
+    scene: '深度学习基线对比，验证复杂模型是否有真正提升。',
+    period: '通用', stockType: '通用',
+    tags: [['GPU','gpu'],['截面数据','flat']],
+    module: 'qlib.contrib.model.pytorch_nn', dataType: 'flat',
+    params: null
+  },
+};
+
+// Common PyTorch hyperparams
+const PYTORCH_PARAMS = [
+  { key: 'd_feat', default: 20, step: 1, hint: '输入特征维度（与特征集匹配）' },
+  { key: 'hidden_size', default: 128, step: 16, hint: '隐藏层大小。越大模型越强但更慢' },
+  { key: 'num_layers', default: 2, step: 1, hint: '网络层数。2-3层一般够用' },
+  { key: 'dropout', default: 0.3, step: 0.05, hint: '随机丢弃比例。越大越抗过拟合' },
+  { key: 'n_epochs', default: 200, step: 10, hint: '最大训练轮数' },
+  { key: 'lr', default: 0.0005, step: 0.0001, hint: '学习率。太大震荡，太小学不动' },
+  { key: 'early_stop', default: 20, step: 5, hint: '验证集多少轮不提升就停止' },
+  { key: 'batch_size', default: 64, step: 16, hint: '批量大小。GPU显存够就可以调大' },
+];
+
+const TOP20_FEATURES = [
+  "RESI5","WVMA5","RSQR5","KLEN","RSQR10","CORR5","CORD5","CORR10",
+  "ROC60","RESI10","VSTD5","RSQR60","CORR60","WVMA60","STD5",
+  "RSQR20","CORD60","CORD10","CORR20","KLOW"
+];
+
+const LABEL_EXPRS = {
+  '1d': 'Ref($close, -2)/Ref($close, -1) - 1',
+  '5d': 'Ref($close, -6)/Ref($close, -1) - 1',
+  '10d': 'Ref($close, -11)/Ref($close, -1) - 1',
+  '20d': 'Ref($close, -21)/Ref($close, -1) - 1',
+};
+
+let selectedModel = null;
+let currentCat = 'all';
+
+// ===== PAGE NAVIGATION =====
+function goToPage(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.page-nav-btn').forEach(b => b.classList.remove('active'));
+  if (page === 'config') {
+    document.getElementById('pageConfig').classList.add('active');
+    document.getElementById('navConfig').classList.add('active');
+  } else if (page === 'quick') {
+    document.getElementById('pageQuick').classList.add('active');
+    document.getElementById('navQuick').classList.add('active');
+  } else if (page === 'scan') {
+    document.getElementById('pageScan').classList.add('active');
+    document.getElementById('navScan').classList.add('active');
+  } else {
+    document.getElementById('pageExec').classList.add('active');
+    document.getElementById('navExec').classList.add('active');
+  }
+  window.scrollTo(0, 0);
+}
+
+// ===== MODEL CARDS =====
+function renderModelCards() {
+  const container = document.getElementById('modelCards');
+  container.innerHTML = '';
+  Object.values(MODELS).forEach(m => {
+    if (currentCat !== 'all' && m.cat !== currentCat) return;
+    const avail = modelAvailability[m.name];
+    const isUnavailable = avail && !avail.available;
+    const card = document.createElement('div');
+    card.className = 'model-card' + (selectedModel === m.name ? ' selected' : '') + (isUnavailable ? ' unavailable' : '');
+    card.dataset.model = m.name;
+    card.onclick = () => { if (!isUnavailable) selectModel(m.name); };
+    const badge = isUnavailable ? `<div class="unavail-badge">${avail.reason}</div>` : '';
+    card.innerHTML = `
+      <div class="model-name">${m.fullName}</div>
+      <div class="model-brief">${m.brief}</div>
+      <div class="model-tags">${m.tags.map(([t,c]) => `<span class="mtag ${c}">${t}</span>`).join('')}</div>
+      ${badge}
+    `;
+    container.appendChild(card);
+  });
+}
+
+function filterCat(cat) {
+  currentCat = cat;
+  document.querySelectorAll('.cat-tab').forEach(t => t.classList.remove('active'));
+  document.querySelector(`.cat-tab[data-cat="${cat}"]`).classList.add('active');
+  renderModelCards();
+}
+
+function selectModel(name) {
+  selectedModel = name;
+  // Highlight card
+  document.querySelectorAll('.model-card').forEach(c => c.classList.remove('selected'));
+  const card = document.querySelector(`.model-card[data-model="${name}"]`);
+  if (card) card.classList.add('selected');
+
+  const m = MODELS[name];
+  // Show detail panel
+  const detail = document.getElementById('modelDetail');
+  detail.className = 'model-detail show';
+  detail.innerHTML = `
+    <h4>${m.fullName} — 模型说明</h4>
+    <p style="font-size:13px;color:var(--text);margin-bottom:12px">${m.desc}</p>
+    <div class="advice-grid">
+      <div class="advice-card">
+        <div class="advice-title">适用场景</div>
+        <div class="advice-text">${m.scene}</div>
+      </div>
+      <div class="advice-card">
+        <div class="advice-title">适合周期</div>
+        <div class="advice-text">${m.period}</div>
+      </div>
+      <div class="advice-card">
+        <div class="advice-title">适合标的</div>
+        <div class="advice-text">${m.stockType}</div>
+      </div>
+      <div class="advice-card">
+        <div class="advice-title">数据格式</div>
+        <div class="advice-text">${m.dataType === 'ts' ? 'TSDatasetH（时间序列滑动窗口）' : 'DatasetH（截面特征向量）'}</div>
+      </div>
+    </div>
+  `;
+
+  // Render hyperparams
+  renderHyperparams(name);
+
+  // Show/hide TS options
+  document.getElementById('tsOptions').style.display = m.dataType === 'ts' ? 'block' : 'none';
+
+  updateConfigPreview();
+}
+
+function renderHyperparams(name) {
+  const m = MODELS[name];
+  const container = document.getElementById('hpContent');
+  const params = m.params || PYTORCH_PARAMS;
+
+  let html = '<div class="hp-grid">';
+  params.forEach(p => {
+    if (p.type === 'select') {
+      html += `<div class="hp-item">
+        <label>${p.key} <span class="hp-hint">${p.hint || ''}</span></label>
+        <select id="hp_${p.key}" onchange="updateConfigPreview()">
+          ${p.options.map(o => `<option value="${o}" ${o===p.default?'selected':''}>${o}</option>`).join('')}
+        </select>
+      </div>`;
+    } else {
+      html += `<div class="hp-item">
+        <label>${p.key} <span class="hp-hint">${p.hint || ''}</span></label>
+        <input type="number" step="${p.step||1}" value="${p.default}" id="hp_${p.key}" onchange="updateConfigPreview()">
+      </div>`;
+    }
+  });
+  html += '</div>';
+
+  if (!m.params) {
+    html += `<div class="hint-box" style="margin-top:10px">
+      <strong>hidden_size</strong>：隐藏层大小。数据少时用64-128，数据多时可以256-512。<br>
+      <strong>num_layers</strong>：层数越多越能学复杂模式，但也更容易过拟合。通常2-3层。<br>
+      <strong>dropout</strong>：数据少时建议0.3-0.5（强正则化），数据多时可以0.1-0.2。<br>
+      <strong>lr</strong>：学习率。如果loss震荡就调小，如果loss不下降就调大。<br>
+      <strong>early_stop</strong>：验证集性能多少轮不提升就停止。越大训练越久但可能找到更好的点。
+    </div>`;
+  }
+
+  container.innerHTML = html;
+}
+
+// ===== FEATURES =====
+function onFeatureSetChange() {
+  const v = document.getElementById('featureSet').value;
+  document.getElementById('featureDetail').style.display = v === 'custom' ? 'block' : 'none';
+  if (v === 'custom') renderFeaturePills();
+  updateConfigPreview();
+}
+
+function renderFeaturePills() {
+  const allFeatures = [
+    "KMID","KLEN","KMID2","KUP","KUP2","KLOW","KLOW2","KSFT","KSFT2",
+    "OPEN0","HIGH0","LOW0","VWAP0",
+    ...["ROC","MA","STD","BETA","RSQR","RESI","MAX","MIN","QTLU","QTLD","RANK","RSV",
+       "IMAX","IMIN","IMXD","CORR","CORD","CNTP","CNTN","CNTD",
+       "SUMP","SUMN","SUMD","VMA","VSTD","WVMA","VSUMP","VSUMN","VSUMD"].flatMap(
+      f => [5,10,20,30,60].map(w => f+w)
+    )
+  ];
+  const container = document.getElementById('featureDetail');
+  container.innerHTML = allFeatures.map(f =>
+    `<span class="feature-pill ${TOP20_FEATURES.includes(f)?'active':''}" onclick="this.classList.toggle('active');updateConfigPreview()">${f}</span>`
+  ).join('');
+}
+
+// ===== STRATEGY =====
+function onStrategyChange() {
+  const v = document.getElementById('strategyType').value;
+  document.getElementById('topkParams').style.display = v === 'topk' ? 'block' : 'none';
+  document.getElementById('thresholdParams').style.display = v === 'threshold' ? 'block' : 'none';
+  updateConfigPreview();
+}
+
+// ===== LABEL =====
+function onLabelChange() {
+  const v = document.getElementById('labelType').value;
+  document.getElementById('labelExpr').style.display = v === 'custom' ? 'block' : 'none';
+  document.getElementById('labelDesc').textContent = '表达式: ' + (LABEL_EXPRS[v] || '自定义');
+  updateConfigPreview();
+}
+
+// ===== TICKER =====
+function addTicker() {
+  const input = document.getElementById('tickerInput');
+  const ticker = input.value.trim().toUpperCase();
+  if (!ticker) return;
+  const container = document.getElementById('tickerTags');
+  // Single stock only: replace existing ticker
+  container.innerHTML = '';
+  const tag = document.createElement('div');
+  tag.className = 'ticker-tag';
+  tag.innerHTML = `${ticker} <span class="remove" onclick="removeTicker(this)">&times;</span>`;
+  container.appendChild(tag);
+  input.value = '';
+  autoSelectStrategy();
+  updateConfigPreview();
+}
+function removeTicker(el) { el.parentElement.remove(); autoSelectStrategy(); updateConfigPreview(); }
+
+function autoSelectStrategy() {
+  const count = document.querySelectorAll('.ticker-tag').length;
+  const sel = document.getElementById('strategyType');
+  if (count >= 1 && count <= 3 && sel.value === 'topk') {
+    sel.value = 'threshold';
+    onStrategyChange();
+  }
+}
+
+// ===== CONFIG PREVIEW =====
+function updateConfigPreview() {
+  if (!selectedModel) {
+    document.getElementById('configPreview').innerHTML = '<span class="cmt"># 请先选择模型</span>';
+    return;
+  }
+  const m = MODELS[selectedModel];
+  const featureSet = document.getElementById('featureSet').value;
+  const strategy = document.getElementById('strategyType').value;
+  const labelType = document.getElementById('labelType').value;
+  const dataSource = document.getElementById('dataSource').value;
+  const kline = document.getElementById('klineInterval').value;
+  const tickers = [...document.querySelectorAll('.ticker-tag')].map(t => t.textContent.replace('×','').trim());
+  const params = m.params || PYTORCH_PARAMS;
+
+  let c = '';
+  c += `<span class="cmt"># Qlib 回测配置 - 自动生成</span>\n\n`;
+  c += `<span class="key">data_source</span>: <span class="str">"${dataSource}"</span>\n`;
+  c += `<span class="key">kline</span>: <span class="str">"${kline}"</span>\n`;
+  c += `<span class="key">target</span>: [${tickers.map(t=>`<span class="str">"${t}"</span>`).join(', ')}]\n\n`;
+
+  c += `<span class="key">model</span>:\n`;
+  c += `  <span class="key">class</span>: <span class="str">"${m.name.replace(/_flat|_ts/,'')}"</span>\n`;
+  c += `  <span class="key">module_path</span>: <span class="str">"${m.module}"</span>\n`;
+  c += `  <span class="key">kwargs</span>:\n`;
+  params.forEach(p => {
+    const el = document.getElementById(`hp_${p.key}`);
+    const val = el ? el.value : p.default;
+    if (p.type === 'select') {
+      c += `    <span class="key">${p.key}</span>: <span class="str">"${val}"</span>\n`;
+    } else {
+      c += `    <span class="key">${p.key}</span>: <span class="num">${val}</span>\n`;
+    }
+  });
+  if (m.module.includes('pytorch')) {
+    c += `    <span class="key">GPU</span>: <span class="num">0</span>\n`;
+  }
+
+  c += `\n<span class="key">dataset</span>:\n`;
+  c += `  <span class="key">class</span>: <span class="str">"${m.dataType === 'ts' ? 'TSDatasetH' : 'DatasetH'}"</span>\n`;
+  c += `  <span class="key">handler</span>: <span class="str">"${featureSet.replace('_20','')}"</span>\n`;
+  if (m.dataType === 'ts') {
+    c += `  <span class="key">step_len</span>: <span class="num">${document.getElementById('stepLen').value}</span>\n`;
+  }
+  c += `  <span class="key">segments</span>:\n`;
+  c += `    <span class="key">train</span>: [<span class="str">"${document.getElementById('trainStart').value}"</span>, <span class="str">"${document.getElementById('trainEnd').value}"</span>]\n`;
+  c += `    <span class="key">valid</span>: [<span class="str">"${document.getElementById('validStart').value}"</span>, <span class="str">"${document.getElementById('validEnd').value}"</span>]\n`;
+  c += `    <span class="key">test</span>:  [<span class="str">"${document.getElementById('testStart').value}"</span>, <span class="str">"${document.getElementById('testEnd').value}"</span>]\n`;
+
+  c += `\n<span class="key">label</span>: <span class="str">"${LABEL_EXPRS[labelType] || document.getElementById('customLabel')?.value || ''}"</span>\n`;
+
+  c += `\n<span class="key">strategy</span>:\n`;
+  if (strategy === 'topk') {
+    c += `  <span class="key">class</span>: <span class="str">"TopkDropoutStrategy"</span>\n`;
+    c += `  <span class="key">topk</span>: <span class="num">${document.getElementById('topK').value}</span>\n`;
+    c += `  <span class="key">n_drop</span>: <span class="num">${document.getElementById('nDrop').value}</span>\n`;
+  } else {
+    c += `  <span class="key">class</span>: <span class="str">"SignalThreshold"</span>\n`;
+    c += `  <span class="key">buy_threshold</span>: <span class="num">${document.getElementById('buyThreshold').value}</span>\n`;
+  }
+  c += `  <span class="key">capital</span>: <span class="num">${document.getElementById('capital').value}</span>\n`;
+
+  document.getElementById('configPreview').innerHTML = c;
+}
+
+// ===== API BASE URL =====
+const API_BASE = window.location.origin;
+
+// ===== BUILD CONFIG FROM FORM =====
+function buildRequestBody() {
+  const m = MODELS[selectedModel];
+  const featureSet = document.getElementById('featureSet').value;
+  const strategy = document.getElementById('strategyType').value;
+  const labelType = document.getElementById('labelType').value;
+  const dataSource = document.getElementById('dataSource').value;
+  const kline = document.getElementById('klineInterval').value;
+  const trainingPool = document.getElementById('trainingPool').value;
+  const tickers = [...document.querySelectorAll('.ticker-tag')].map(t => t.textContent.replace('\u00d7','').trim());
+  const params = m.params || PYTORCH_PARAMS;
+
+  // Collect hyperparameters
+  const kwargs = {};
+  params.forEach(p => {
+    const el = document.getElementById(`hp_${p.key}`);
+    const val = el ? el.value : p.default;
+    kwargs[p.key] = p.type === 'select' ? val : Number(val);
+  });
+
+  // Build dataset config
+  const datasetConfig = {
+    dataset_class: m.dataType === 'ts' ? 'TSDatasetH' : 'DatasetH',
+    handler: featureSet.replace('_20', ''),
+    feature_set: featureSet,
+    segments: {
+      train: [document.getElementById('trainStart').value, document.getElementById('trainEnd').value],
+      valid: [document.getElementById('validStart').value, document.getElementById('validEnd').value],
+      test:  [document.getElementById('testStart').value,  document.getElementById('testEnd').value],
+    },
+  };
+  if (m.dataType === 'ts') {
+    datasetConfig.step_len = Number(document.getElementById('stepLen').value);
+  }
+
+  // Build strategy config
+  const strategyConfig = {
+    capital: Number(document.getElementById('capital').value),
+  };
+  if (strategy === 'topk') {
+    strategyConfig.strategy_class = 'TopkDropoutStrategy';
+    strategyConfig.topk = Number(document.getElementById('topK').value);
+    strategyConfig.n_drop = Number(document.getElementById('nDrop').value);
+  } else {
+    strategyConfig.strategy_class = 'SignalThreshold';
+    strategyConfig.buy_threshold = Number(document.getElementById('buyThreshold').value);
+  }
+
+  // Label expression
+  const label = LABEL_EXPRS[labelType] || document.getElementById('customLabel')?.value || '';
+
+  return {
+    model: {
+      model_class: selectedModel,
+      module_path: m.module,
+      kwargs: kwargs,
+    },
+    dataset: datasetConfig,
+    data_source: dataSource,
+    kline: kline,
+    target: tickers,
+    training_pool: trainingPool,
+    label: label,
+    strategy: strategyConfig,
+  };
+}
+
+// ===== START BACKTEST =====
+let currentSSE = null;
+
+async function startBacktest() {
+  // Validate
+  if (!selectedModel) { alert('请先选择模型'); return; }
+  const tickers = [...document.querySelectorAll('.ticker-tag')].map(t => t.textContent.replace('\u00d7','').trim());
+  if (tickers.length === 0) { alert('请输入一个目标股票'); return; }
+
+  // Switch to execution page
+  goToPage('exec');
+  resetExecUI();
+
+  const body = buildRequestBody();
+  addLog('正在提交回测请求...', 'info');
+
+  try {
+    const resp = await fetch(`${API_BASE}/api/backtest`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({ detail: resp.statusText }));
+      const msg = typeof err.detail === 'string' ? err.detail
+        : Array.isArray(err.detail) ? err.detail.map(e => e.msg || e.loc?.join('.')).join('; ')
+        : JSON.stringify(err);
+      throw new Error(`服务端拒绝请求 (${resp.status}): ${msg}`);
+    }
+
+    const { job_id } = await resp.json();
+    addLog(`回测任务已创建: ${job_id}`, 'success');
+    connectSSE(job_id);
+  } catch (e) {
+    addLog(`请求失败: ${e.message}`, 'error');
+    setProgress('请求失败', 0);
+    document.getElementById('progressBar').classList.add('error');
+    document.getElementById('execTitle').textContent = '回测失败';
+    document.getElementById('execSubtitle').textContent = '请检查后端服务是否启动 (python -m backtest_server.server)';
+  }
+}
+
+// ===== SSE STREAMING =====
+function connectSSE(jobId) {
+  if (currentSSE) { currentSSE.close(); currentSSE = null; }
+
+  const sse = new EventSource(`${API_BASE}/api/backtest/${jobId}/stream`);
+  currentSSE = sse;
+
+  sse.addEventListener('step', e => {
+    const d = JSON.parse(e.data);
+    setStepState(d.step, d.state);
+  });
+
+  sse.addEventListener('log', e => {
+    const d = JSON.parse(e.data);
+    addLog(d.msg, d.type || 'info');
+  });
+
+  sse.addEventListener('progress', e => {
+    const d = JSON.parse(e.data);
+    setProgress(d.label || '', d.pct);
+  });
+
+  sse.addEventListener('result', e => {
+    const data = JSON.parse(e.data);
+    sse.close();
+    currentSSE = null;
+    setProgress('回测完成', 100);
+    document.getElementById('execTitle').textContent = '回测完成';
+    document.getElementById('execSubtitle').textContent = '结果如下，你可以返回配置页调整参数重新运行';
+    showResults(data);
+  });
+
+  sse.addEventListener('error', e => {
+    // SSE protocol error vs server-sent error event
+    if (e.data) {
+      const d = JSON.parse(e.data);
+      addLog(`错误: ${d.msg}`, 'error');
+      if (d.step >= 0) setStepState(d.step, 'error');
+    } else {
+      addLog('SSE 连接断开', 'error');
+    }
+    sse.close();
+    currentSSE = null;
+    document.getElementById('progressBar').classList.add('error');
+    document.getElementById('execTitle').textContent = '回测失败';
+    document.getElementById('execSubtitle').textContent = '查看日志了解详情，可返回配置页重试';
+  });
+
+  sse.addEventListener('ping', e => {
+    try { const d = JSON.parse(e.data); if (d.msg) addLog(d.msg, 'info'); } catch(_) {}
+  });
+}
+
+function resetExecUI() {
+  // Reset steps
+  for (let i = 0; i < 6; i++) {
+    const el = document.getElementById('step' + i);
+    el.className = 'step-item';
+  }
+  setProgress('准备中...', 0);
+
+  // Clear logs
+  document.getElementById('logBody').innerHTML = '';
+  document.getElementById('logCount').textContent = '0 条';
+
+  // Hide results
+  document.getElementById('resultsSection').classList.add('hidden');
+
+  // Reset title
+  document.getElementById('execTitle').textContent = '回测运行中';
+  document.getElementById('execSubtitle').textContent = '正在执行回测任务，请耐心等待...';
+
+  // Reset progress bar
+  document.getElementById('progressBar').classList.remove('error');
+}
+
+function setStepState(index, state) {
+  const el = document.getElementById('step' + index);
+  el.className = 'step-item ' + state;
+  if (state === 'done') {
+    el.querySelector('.step-circle').textContent = '✓';
+  } else if (state === 'error') {
+    el.querySelector('.step-circle').textContent = '✗';
+  }
+}
+
+function setProgress(label, pct) {
+  document.getElementById('currentStepText').textContent = label;
+  document.getElementById('pctText').textContent = pct + '%';
+  document.getElementById('progressBar').style.width = pct + '%';
+}
+
+function addLog(msg, type) {
+  const body = document.getElementById('logBody');
+  const now = new Date();
+  const time = now.toTimeString().substring(0, 8);
+  const line = document.createElement('div');
+  line.className = `log-line ${type}`;
+  line.innerHTML = `<span class="time">[${time}]</span><span class="msg">${msg}</span>`;
+  body.appendChild(line);
+  body.scrollTop = body.scrollHeight;
+
+  const count = body.querySelectorAll('.log-line').length;
+  document.getElementById('logCount').textContent = count + ' 条';
+}
+
+// ===== SHOW REAL RESULTS =====
+function showResults(data) {
+  const section = document.getElementById('resultsSection');
+  section.classList.remove('hidden');
+
+  const s = data.summary;
+
+  // Summary
+  const modelRet = s.model_return;
+  document.getElementById('rModelReturn').textContent = (modelRet >= 0 ? '+' : '') + modelRet.toFixed(2) + '%';
+  document.getElementById('rModelReturn').className = 'sc-value ' + (modelRet >= 0 ? 'positive' : 'negative');
+  const bhRet = s.bh_return;
+  document.getElementById('rBhReturn').textContent = (bhRet >= 0 ? '+' : '') + bhRet.toFixed(2) + '%';
+  document.getElementById('rBhReturn').className = 'sc-value ' + (bhRet >= 0 ? 'positive' : 'negative');
+  document.getElementById('rWinRate').textContent = s.win_rate.toFixed(1) + '%';
+  document.getElementById('rTotalTrades').textContent = s.total_trades;
+
+  // Trades
+  const trades = data.trades || [];
+  document.getElementById('tradeTableBody').innerHTML = trades.map(t => {
+    const bp = t.buy_price != null ? `$${t.buy_price.toFixed(2)}` : '-';
+    const sp = t.sell_price != null ? `$${t.sell_price.toFixed(2)}` : '-';
+    const ret = t.return_pct != null ? t.return_pct : null;
+    const retStr = ret != null ? `${ret >= 0 ? '+' : ''}${ret.toFixed(2)}%` : '-';
+    const retClass = ret != null ? (ret >= 0 ? 'positive' : 'negative') : '';
+    const openTag = t.is_open ? ' <span style="color:var(--accent3);font-size:11px">(未平仓)</span>' : '';
+    return `<tr>
+      <td style="font-weight:600;color:var(--accent1)">${t.ticker || '-'}</td>
+      <td>${t.buy_date}</td><td>${bp}</td>
+      <td>${t.sell_date}${openTag}</td><td>${sp}</td>
+      <td>${t.days}天</td>
+      <td class="${retClass}">${retStr}</td>
+    </tr>`;
+  }).join('');
+
+  // Timeline
+  const bar = document.getElementById('timelineBar');
+  const timeline = data.timeline || [];
+  if (timeline.length > 0) {
+    bar.innerHTML = timeline.map(s =>
+      `<div class="timeline-seg ${s.type}" style="flex:${s.pct}"></div>`
+    ).join('');
+  } else {
+    bar.innerHTML = '<div class="timeline-seg empty" style="flex:100"></div>';
+  }
+
+  // Segments table
+  const segments = data.segments || [];
+  document.getElementById('segmentTableBody').innerHTML = segments.map(seg => {
+    const isHold = seg.type === 'hold';
+    const typeStyle = isHold ? 'color:var(--accent2)' : 'color:var(--text-dim)';
+    const typeText = isHold ? '持仓' : '空仓';
+    const sp = seg.start_price != null ? `$${seg.start_price.toFixed(2)}` : '-';
+    const ep = seg.end_price != null ? `$${seg.end_price.toFixed(2)}` : '-';
+    const chg = seg.change_pct != null ? seg.change_pct : null;
+    const chgStr = chg != null ? `${chg >= 0 ? '+' : ''}${chg.toFixed(2)}%` : '-';
+    const chgClass = chg != null ? (chg >= 0 ? 'positive' : 'negative') : '';
+    return `<tr>
+      <td style="font-weight:600;color:var(--accent1)">${seg.ticker || '-'}</td>
+      <td style="${typeStyle}">${typeText}</td>
+      <td>${seg.start}</td><td>${seg.end}</td>
+      <td>${sp}</td><td>${ep}</td>
+      <td>${seg.days}天</td>
+      <td class="${chgClass}">${chgStr}</td>
+    </tr>`;
+  }).join('');
+
+  // Holding stats
+  const hs = data.holding_stats;
+  if (hs) {
+    document.getElementById('holdingStats').innerHTML = `
+      共 ${hs.count} 段持仓, ${hs.total_days} 个交易日<br>
+      盈利段: ${hs.profit_segs} / 亏损段: ${hs.loss_segs}<br>
+      平均持仓收益: ${hs.avg_return >= 0 ? '+' : ''}${hs.avg_return.toFixed(2)}%
+    `;
+  } else {
+    document.getElementById('holdingStats').innerHTML = '无持仓数据';
+  }
+
+  // Empty stats
+  const es = data.empty_stats;
+  if (es) {
+    document.getElementById('emptyStats').innerHTML = `
+      共 ${es.count} 段空仓, ${es.total_days} 个交易日<br>
+      错过上涨: +${es.missed_up.toFixed(2)}%<br>
+      规避下跌: -${Math.abs(es.avoided_down).toFixed(2)}%
+    `;
+  } else {
+    document.getElementById('emptyStats').innerHTML = '无空仓数据';
+  }
+}
+
+function switchResultTab(btn, panelId) {
+  btn.parentElement.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  ['tradesPanel','segmentsPanel','statsPanel'].forEach(id => {
+    document.getElementById(id).style.display = id === panelId ? 'block' : 'none';
+  });
+}
+
+// ===== MODEL AVAILABILITY =====
+const modelAvailability = {};  // { modelName: { available, reason } }
+
+async function fetchModelAvailability() {
+  try {
+    const resp = await fetch(`${API_BASE}/api/models`);
+    const models = await resp.json();
+    models.forEach(m => {
+      modelAvailability[m.name] = {
+        available: m.available !== false,
+        reason: m.unavailable_reason || '',
+      };
+    });
+  } catch (e) { /* server offline, assume all available */ }
+  renderModelCards();
+}
+
+// ===== AUTO SCAN =====
+let currentScanSSE = null;
+let currentScanJobId = null;
+// Track model cards by model_class for updates
+let scanModelCards = {};
+
+// All scannable model_class names in scan order (mirrors backend MODEL_SCAN_LIST)
+// Excluded: TRAModel (needs MTSDatasetH), HIST (needs external concept files)
+const SCAN_MODELS = [
+  {id:'LGBModel',       name:'LightGBM',     desc:'梯度提升决策树，速度快，擅长发现特征间的简单规律'},
+  {id:'XGBModel',       name:'XGBoost',       desc:'经典梯度提升，正则化更强，抗过拟合能力好'},
+  {id:'CatBoostModel',  name:'CatBoost',      desc:'俄罗斯Yandex出品，对类别特征处理好'},
+  {id:'LinearModel',    name:'线性模型',       desc:'最简单的线性回归，作为基准对照'},
+  {id:'DEnsembleModel', name:'集成模型',       desc:'多个基模型加权融合，互补提升稳定性'},
+  {id:'LSTM_flat',      name:'LSTM',          desc:'长短期记忆网络，擅长捕捉时间序列中的长期依赖'},
+  {id:'GRU_flat',       name:'GRU',           desc:'LSTM的简化版，参数更少，训练更快'},
+  {id:'ALSTM_flat',     name:'ALSTM',         desc:'带注意力机制的LSTM，能聚焦关键时间点'},
+  {id:'LSTM_ts',        name:'LSTM-TS',       desc:'时序增强版LSTM，每个时间步独立建模'},
+  {id:'GRU_ts',         name:'GRU-TS',        desc:'时序增强版GRU，更细粒度的时间建模'},
+  {id:'ALSTM_ts',       name:'ALSTM-TS',      desc:'时序增强版ALSTM，注意力+时序双重加持'},
+  {id:'ADARNN',         name:'ADARNN',        desc:'自适应RNN，自动应对数据分布漂移'},
+  {id:'Transformer_flat',name:'Transformer',  desc:'自注意力架构，能捕捉任意距离的特征关系'},
+  {id:'GATs_flat',      name:'GATs',          desc:'图注意力网络，建模股票间的关联影响'},
+  {id:'Transformer_ts', name:'Transformer-TS',desc:'时序增强版Transformer，逐步处理时间窗口'},
+  {id:'LocalFormer_ts', name:'LocalFormer',   desc:'局部注意力Transformer，关注邻近时间模式'},
+  {id:'GATs_ts',        name:'GATs-TS',       desc:'时序增强版图注意力，兼顾关联性和时序性'},
+  {id:'TCN_flat',       name:'TCN',           desc:'时间卷积网络，用卷积代替循环，并行度高'},
+  {id:'TabnetModel',    name:'TabNet',        desc:'Google出品，自动选择重要特征，可解释性好'},
+  {id:'SFM',            name:'SFM',           desc:'状态频率记忆网络，从频域角度分析时序'},
+  {id:'DNNModelPytorch',name:'DNN',           desc:'深度全连接网络，通用的非线性拟合器'},
+  {id:'TCN_ts',         name:'TCN-TS',        desc:'时序增强版TCN，更精细的时间窗口卷积'},
+];
+
+function selectScanStyle(el) {
+  el.parentElement.querySelectorAll('.scan-style-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  const hints = {
+    ultra_short: '超短线：持仓 1-2 天，用近 6 个月数据训练',
+    swing: '波段：持仓 1-2 周，用近 24 个月数据训练',
+  };
+  const hint = document.getElementById('scanStyleHint');
+  if (hint) hint.textContent = hints[el.dataset.style] || '';
+}
+
+function initScanModelGrid() {
+  const grid = document.getElementById('scanModelGrid');
+  grid.innerHTML = '';
+  scanModelCards = {};
+  SCAN_MODELS.forEach(m => {
+    const card = document.createElement('div');
+    card.className = 'scan-model-card smc-pending';
+    card.title = m.desc;
+    card.innerHTML = `<div class="smc-name">${m.name}</div><div class="smc-desc">${m.desc}</div><div class="smc-status">等待中</div>`;
+    grid.appendChild(card);
+    scanModelCards[m.id] = card;
+  });
+}
+
+function updateScanModelCard(mc, state, info) {
+  const card = scanModelCards[mc];
+  if (!card) return;
+  card.className = 'scan-model-card smc-' + state;
+  const statusEl = card.querySelector('.smc-status');
+  if (state === 'running') {
+    statusEl.textContent = '运行中...';
+  } else if (state === 'completed') {
+    const ret = info && info.model_return != null ? `${info.model_return >= 0 ? '+' : ''}${info.model_return.toFixed(2)}%` : '完成';
+    statusEl.textContent = ret;
+  } else if (state === 'failed') {
+    statusEl.textContent = '失败';
+    statusEl.title = info || '';
+  } else if (state === 'skipped') {
+    statusEl.textContent = '跳过';
+    statusEl.title = info || '';
+  }
+}
+
+function addScanLog(msg) {
+  const body = document.getElementById('scanLogBody');
+  const now = new Date();
+  const time = now.toTimeString().substring(0, 8);
+  const line = document.createElement('div');
+  line.style.color = 'var(--text-dim)';
+  line.innerHTML = `<span style="color:var(--text-dim);margin-right:8px">[${time}]</span>${msg}`;
+  body.appendChild(line);
+  body.scrollTop = body.scrollHeight;
+}
+
+async function startScan() {
+  const ticker = document.getElementById('scanTicker').value.trim().toUpperCase();
+  if (!ticker) { alert('请输入股票代码'); return; }
+  const dataSource = document.getElementById('scanDataSource').value;
+  const styleEl = document.querySelector('.scan-style-btn.active');
+  const tradingStyle = styleEl ? styleEl.dataset.style : 'ultra_short';
+
+  // Show progress, hide results/prediction
+  document.getElementById('scanProgressSection').classList.remove('hidden');
+  document.getElementById('scanResultsSection').classList.add('hidden');
+  document.getElementById('scanPredictSection').classList.add('hidden');
+  document.getElementById('scanStartBtn').disabled = true;
+
+  // Init model grid
+  initScanModelGrid();
+  document.getElementById('scanLogBody').innerHTML = '';
+  document.getElementById('scanBarFill').style.width = '0%';
+  document.getElementById('scanProgressLabel').textContent = '准备中...';
+  document.getElementById('scanPctText').textContent = '0%';
+
+  addScanLog(`开始扫描 ${ticker} (${dataSource}, ${tradingStyle})`);
+
+  try {
+    const resp = await fetch(`${API_BASE}/api/scan`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ticker, data_source: dataSource, trading_style: tradingStyle }),
+    });
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({ detail: resp.statusText }));
+      throw new Error(typeof err.detail === 'string' ? err.detail : JSON.stringify(err));
+    }
+    const { job_id } = await resp.json();
+    currentScanJobId = job_id;
+    addScanLog(`扫描任务已创建: ${job_id}`);
+    connectScanSSE(job_id);
+  } catch (e) {
+    addScanLog(`请求失败: ${e.message}`);
+    document.getElementById('scanStartBtn').disabled = false;
+  }
+}
+
+function connectScanSSE(jobId) {
+  if (currentScanSSE) { currentScanSSE.close(); currentScanSSE = null; }
+
+  const sse = new EventSource(`${API_BASE}/api/scan/${jobId}/stream`);
+  currentScanSSE = sse;
+  currentScanJobId = jobId;
+
+  sse.addEventListener('scan_start', e => {
+    const d = JSON.parse(e.data);
+    addScanLog(`扫描开始: ${d.ticker}, ${d.total_models} 个模型`);
+  });
+
+  sse.addEventListener('scan_model_start', e => {
+    const d = JSON.parse(e.data);
+    updateScanModelCard(d.model_class, 'running');
+    addScanLog(`[${d.index}/${d.total}] 开始 ${d.model_class}`);
+  });
+
+  sse.addEventListener('scan_model_complete', e => {
+    const d = JSON.parse(e.data);
+    updateScanModelCard(d.model_class, 'completed', d.summary);
+    const ret = d.summary && d.summary.model_return != null ? `${d.summary.model_return.toFixed(2)}%` : '-';
+    const dur = d.duration_s != null ? ` (${d.duration_s.toFixed(1)}s)` : '';
+    addScanLog(`${d.model_class} 完成: 收益 ${ret}${dur}`);
+  });
+
+  sse.addEventListener('scan_model_failed', e => {
+    const d = JSON.parse(e.data);
+    updateScanModelCard(d.model_class, 'failed', d.error);
+    addScanLog(`${d.model_class} 失败: ${d.error}`);
+  });
+
+  sse.addEventListener('scan_model_skipped', e => {
+    const d = JSON.parse(e.data);
+    updateScanModelCard(d.model_class, 'skipped', d.reason);
+    addScanLog(`${d.model_class} 跳过: ${d.reason}`);
+  });
+
+  sse.addEventListener('scan_progress', e => {
+    const d = JSON.parse(e.data);
+    const pct = d.pct || 0;
+    document.getElementById('scanBarFill').style.width = pct + '%';
+    document.getElementById('scanPctText').textContent = pct + '%';
+    document.getElementById('scanProgressLabel').textContent =
+      `${d.completed}/${d.total} 模型已完成`;
+    if (d.current_model) {
+      updateScanModelCard(d.current_model, 'running');
+    }
+  });
+
+  sse.addEventListener('scan_complete', e => {
+    const d = JSON.parse(e.data);
+    sse.close();
+    currentScanSSE = null;
+    currentScanJobId = null;
+    document.getElementById('scanBarFill').style.width = '100%';
+    document.getElementById('scanPctText').textContent = '100%';
+    document.getElementById('scanProgressLabel').textContent = '扫描完成';
+    document.getElementById('scanStartBtn').disabled = false;
+    addScanLog(`扫描完成! 最优模型: ${d.best_model || '无'} (${d.best_reason || ''})`);
+    showScanResults(d);
+    loadScanHistory();
+  });
+
+  sse.addEventListener('scan_error', e => {
+    const d = JSON.parse(e.data);
+    sse.close();
+    currentScanSSE = null;
+    currentScanJobId = null;
+    document.getElementById('scanStartBtn').disabled = false;
+    addScanLog(`扫描失败: ${d.msg}`);
+  });
+
+  sse.addEventListener('ping', () => {});
+
+  sse.onerror = () => {
+    sse.close();
+    currentScanSSE = null;
+    // Auto-reconnect after 3 seconds
+    if (currentScanJobId) {
+      addScanLog('SSE 连接断开，3秒后自动重连...');
+      setTimeout(() => {
+        if (currentScanJobId) {
+          addScanLog('正在重连...');
+          connectScanSSE(currentScanJobId);
+        }
+      }, 3000);
+    } else {
+      addScanLog('SSE 连接断开');
+      document.getElementById('scanStartBtn').disabled = false;
+    }
+  };
+}
+
+// Model ID → friendly name lookup
+const _modelNames = {};
+SCAN_MODELS.forEach(m => { _modelNames[m.id] = m.name; });
+function modelDisplayName(id) { return _modelNames[id] || id; }
+
+async function fetchAlphaScore(ticker) {
+  const card = document.getElementById('alphaScoreCard');
+  if (!ticker) { card.style.display = 'none'; return; }
+  try {
+    const resp = await fetch(`${API_BASE}/api/score/${encodeURIComponent(ticker)}`);
+    if (!resp.ok) { card.style.display = 'none'; return; }
+    const data = await resp.json();
+    const a = data.alpha_score;
+    const colors = { buy: '#34d399', sell: '#ef4444', hold: '#f59e0b' };
+    const color = colors[a.signal] || '#4d9fff';
+    const circumf = 2 * Math.PI * 42;
+    const offset = circumf - (a.score / 10) * circumf;
+    document.getElementById('alphaScoreArc').setAttribute('stroke', color);
+    document.getElementById('alphaScoreArc').setAttribute('stroke-dashoffset', offset);
+    document.getElementById('alphaScoreNum').textContent = a.score;
+    document.getElementById('alphaScoreLabel').textContent = a.label;
+    document.getElementById('alphaScoreLabel').style.color = color;
+    document.getElementById('alphaScoreReason').textContent = a.reason;
+    card.style.display = '';
+  } catch(_) { card.style.display = 'none'; }
+}
+
+function showScanResults(data) {
+  const section = document.getElementById('scanResultsSection');
+  section.classList.remove('hidden');
+
+  // Training period info banner
+  const banner = document.getElementById('scanInfoBanner');
+  if (data.train_months && data.segments) {
+    const s = data.segments;
+    const totalMonths = data.train_months + data.valid_months + data.test_months;
+    banner.innerHTML =
+      `<strong style="color:var(--text-secondary)">训练配置：</strong>` +
+      `训练 <b style="color:var(--accent1)">${data.train_months}</b> 个月 (${s.train[0]} ~ ${s.train[1]}) → ` +
+      `验证 <b style="color:var(--accent1)">${data.valid_months}</b> 个月 (${s.valid[0]} ~ ${s.valid[1]}) → ` +
+      `测试 <b style="color:var(--accent1)">${data.test_months}</b> 个月 (${s.test[0]} ~ ${s.test[1]})` +
+      `&nbsp;&nbsp;|&nbsp;&nbsp;共 <b style="color:var(--text-secondary)">${totalMonths}</b> 个月数据` +
+      `<br><span style="color:var(--text-dim)">下表收益均为<b>测试期</b>（样本外）的真实表现，非训练期拟合结果。</span>`;
+    banner.style.display = '';
+  } else {
+    banner.style.display = 'none';
+  }
+
+  // Best model card
+  document.getElementById('scanBestModel').textContent = modelDisplayName(data.best_model) || '无';
+  document.getElementById('scanBestStats').textContent = data.best_reason || '';
+
+  // Rankings table
+  const rankings = data.rankings || [];
+  const tbody = document.getElementById('scanRankBody');
+  tbody.innerHTML = rankings.map((r, i) => {
+    const ret = r.model_return != null ? `${r.model_return >= 0 ? '+' : ''}${r.model_return.toFixed(2)}%` : '-';
+    const bh = r.bh_return != null ? `${r.bh_return >= 0 ? '+' : ''}${r.bh_return.toFixed(2)}%` : '-';
+    const excess = (r.model_return != null && r.bh_return != null) ? r.model_return - r.bh_return : null;
+    const exStr = excess != null ? `${excess >= 0 ? '+' : ''}${excess.toFixed(2)}%` : '-';
+    const wr = r.win_rate != null ? `${r.win_rate.toFixed(1)}%` : '-';
+    const trades = r.total_trades != null ? r.total_trades : '-';
+    const retClass = r.model_return >= 0 ? 'color:var(--accent2)' : 'color:var(--danger)';
+    const exClass = excess != null ? (excess >= 0 ? 'color:var(--accent2)' : 'color:var(--danger)') : '';
+    return `<tr>
+      <td class="rank-num">${i + 1}</td>
+      <td style="font-weight:600" title="${r.model_class}">${modelDisplayName(r.model_class)}</td>
+      <td style="${retClass}">${ret}</td>
+      <td>${bh}</td>
+      <td style="${exClass}">${exStr}</td>
+      <td>${wr}</td><td>${trades}</td><td>-</td>
+      <td style="color:var(--accent2)">完成</td>
+    </tr>`;
+  }).join('');
+
+  // Show predict button only if there's a best_model
+  document.getElementById('scanPredictBtn').style.display = data.best_model ? '' : 'none';
+
+  // Fetch and display AlphaScore
+  const scanTicker = document.getElementById('scanTicker').value.trim().toUpperCase();
+  fetchAlphaScore(scanTicker);
+}
+
+async function showScanDetail(jobId) {
+  // Fetch full scan details from API and show results
+  try {
+    const resp = await fetch(`${API_BASE}/api/scan/${jobId}`);
+    if (!resp.ok) return;
+    const job = await resp.json();
+    currentScanJobId = jobId;
+
+    if (job.status === 'running') {
+      // Show progress and reconnect SSE
+      document.getElementById('scanProgressSection').classList.remove('hidden');
+      document.getElementById('scanResultsSection').classList.add('hidden');
+      document.getElementById('scanPredictSection').classList.add('hidden');
+      initScanModelGrid();
+      document.getElementById('scanLogBody').innerHTML = '';
+      document.getElementById('scanStartBtn').disabled = true;
+      addScanLog(`重连到扫描任务 ${jobId.substring(0, 8)}...`);
+
+      // Mark already-completed models from results
+      (job.model_results || []).forEach(r => {
+        if (r.status === 'completed') {
+          updateScanModelCard(r.model_class, 'completed', r.summary);
+        } else if (r.status === 'failed') {
+          updateScanModelCard(r.model_class, 'failed', r.error_msg);
+        } else if (r.status === 'skipped') {
+          updateScanModelCard(r.model_class, 'skipped', r.error_msg);
+        }
+      });
+      // Update progress bar
+      const pct = job.total_models > 0 ? Math.round(job.completed_models / job.total_models * 100) : 0;
+      document.getElementById('scanBarFill').style.width = pct + '%';
+      document.getElementById('scanPctText').textContent = pct + '%';
+      document.getElementById('scanProgressLabel').textContent =
+        `${job.completed_models}/${job.total_models} 模型已完成`;
+
+      connectScanSSE(jobId);
+    } else if (job.status === 'completed') {
+      // Show completed results
+      document.getElementById('scanProgressSection').classList.add('hidden');
+      document.getElementById('scanStartBtn').disabled = false;
+
+      // Build rankings from model_results
+      const rankings = (job.model_results || [])
+        .filter(r => r.status === 'completed' && r.summary)
+        .map(r => ({
+          model_class: r.model_class,
+          model_return: r.summary.model_return,
+          bh_return: r.summary.bh_return,
+          win_rate: r.summary.win_rate,
+          total_trades: r.summary.total_trades,
+          duration_s: r.duration_s,
+          status: r.status,
+        }))
+        .sort((a, b) => b.model_return - a.model_return);
+
+      // Also add failed/skipped
+      const failed = (job.model_results || []).filter(r => r.status !== 'completed');
+
+      showScanResultsFull(rankings, failed, job.best_model, job.best_model_reason, {trading_style: job.trading_style, ticker: job.ticker});
+
+      // If prediction exists, show it
+      if (job.prediction) {
+        showPrediction(job.prediction);
+      }
+    } else if (job.status === 'failed') {
+      document.getElementById('scanProgressSection').classList.add('hidden');
+      document.getElementById('scanStartBtn').disabled = false;
+      addScanLog(`扫描失败: ${job.error_msg || '未知错误'}`);
+    }
+  } catch (e) {
+    addScanLog(`加载详情失败: ${e.message}`);
+  }
+}
+
+function showScanResultsFull(rankings, failed, bestModel, bestReason, scanMeta) {
+  const section = document.getElementById('scanResultsSection');
+  section.classList.remove('hidden');
+
+  // Training period info banner (from scan metadata if available)
+  const banner = document.getElementById('scanInfoBanner');
+  if (scanMeta && scanMeta.trading_style) {
+    const presets = { ultra_short: {train:6,valid:1,test:1}, swing: {train:24,valid:6,test:3} };
+    const p = presets[scanMeta.trading_style];
+    if (p) {
+      const totalMonths = p.train + p.valid + p.test;
+      const styleName = scanMeta.trading_style === 'ultra_short' ? '超短线' : '波段';
+      banner.innerHTML =
+        `<strong style="color:var(--text-secondary)">训练配置（${styleName}）：</strong>` +
+        `训练 <b style="color:var(--accent1)">${p.train}</b> 个月 → ` +
+        `验证 <b style="color:var(--accent1)">${p.valid}</b> 个月 → ` +
+        `测试 <b style="color:var(--accent1)">${p.test}</b> 个月` +
+        `&nbsp;&nbsp;|&nbsp;&nbsp;共 <b style="color:var(--text-secondary)">${totalMonths}</b> 个月数据` +
+        `<br><span style="color:var(--text-dim)">下表收益均为<b>测试期</b>（样本外）的真实表现，非训练期拟合结果。</span>`;
+      banner.style.display = '';
+    } else {
+      banner.style.display = 'none';
+    }
+  } else {
+    banner.style.display = 'none';
+  }
+
+  document.getElementById('scanBestModel').textContent = modelDisplayName(bestModel) || '无';
+  document.getElementById('scanBestStats').textContent = bestReason || '';
+
+  const tbody = document.getElementById('scanRankBody');
+  let rows = rankings.map((r, i) => {
+    const ret = r.model_return != null ? `${r.model_return >= 0 ? '+' : ''}${r.model_return.toFixed(2)}%` : '-';
+    const bh = r.bh_return != null ? `${r.bh_return >= 0 ? '+' : ''}${r.bh_return.toFixed(2)}%` : '-';
+    const excess = (r.model_return != null && r.bh_return != null) ? r.model_return - r.bh_return : null;
+    const exStr = excess != null ? `${excess >= 0 ? '+' : ''}${excess.toFixed(2)}%` : '-';
+    const wr = r.win_rate != null ? `${r.win_rate.toFixed(1)}%` : '-';
+    const trades = r.total_trades != null ? r.total_trades : '-';
+    const dur = r.duration_s != null ? `${r.duration_s.toFixed(0)}s` : '-';
+    const retClass = r.model_return >= 0 ? 'color:var(--accent2)' : 'color:var(--danger)';
+    const exClass = excess != null ? (excess >= 0 ? 'color:var(--accent2)' : 'color:var(--danger)') : '';
+    return `<tr>
+      <td class="rank-num">${i + 1}</td>
+      <td style="font-weight:600" title="${r.model_class}">${modelDisplayName(r.model_class)}</td>
+      <td style="${retClass}">${ret}</td>
+      <td>${bh}</td>
+      <td style="${exClass}">${exStr}</td>
+      <td>${wr}</td><td>${trades}</td><td>${dur}</td>
+      <td style="color:var(--accent2)">完成</td>
+    </tr>`;
+  });
+
+  // Append failed/skipped
+  failed.forEach(r => {
+    const stColor = r.status === 'failed' ? 'var(--danger)' : 'var(--text-dim)';
+    const stText = r.status === 'failed' ? '失败' : '跳过';
+    rows.push(`<tr style="opacity:0.6">
+      <td class="rank-num">-</td>
+      <td title="${r.model_class}">${modelDisplayName(r.model_class)}</td>
+      <td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td>
+      <td style="color:${stColor}">${stText}</td>
+    </tr>`);
+  });
+
+  tbody.innerHTML = rows.join('');
+  document.getElementById('scanPredictBtn').style.display = bestModel ? '' : 'none';
+
+  // Fetch and display AlphaScore
+  if (scanMeta && scanMeta.ticker) {
+    fetchAlphaScore(scanMeta.ticker);
+  } else {
+    const scanTicker = document.getElementById('scanTicker').value.trim().toUpperCase();
+    fetchAlphaScore(scanTicker);
+  }
+}
+
+async function runPrediction() {
+  if (!currentScanJobId) return;
+  const btn = document.getElementById('scanPredictBtn');
+  btn.disabled = true;
+  btn.textContent = '预测中...';
+
+  try {
+    const resp = await fetch(`${API_BASE}/api/scan/${currentScanJobId}/predict`, {
+      method: 'POST',
+    });
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({ detail: resp.statusText }));
+      throw new Error(typeof err.detail === 'string' ? err.detail : JSON.stringify(err));
+    }
+    const data = await resp.json();
+    showPrediction(data);
+  } catch (e) {
+    alert(`预测失败: ${e.message}`);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '预测未来操作';
+  }
+}
+
+function showPrediction(data) {
+  const section = document.getElementById('scanPredictSection');
+  section.classList.remove('hidden');
+
+  const friendlyModel = modelDisplayName(data.model_class);
+
+  // Signal card with human-readable explanation
+  const signalMap = { buy: '建议买入', sell: '建议卖出', hold: '观望' };
+  const explainMap = {
+    buy: `${friendlyModel} 模型认为 ${data.ticker} 近期大概率上涨，预测得分高于买入阈值`,
+    sell: `${friendlyModel} 模型认为 ${data.ticker} 近期大概率下跌，预测得分低于卖出阈值`,
+    hold: `${friendlyModel} 模型对 ${data.ticker} 近期走势没有明确倾向，建议暂时观望`,
+  };
+  const signalClass = `signal-${data.latest_signal}`;
+  const scoreAbs = Math.abs(data.latest_score);
+  const strength = scoreAbs > 0.01 ? '强' : scoreAbs > 0.003 ? '中等' : '弱';
+
+  document.getElementById('scanPredictCard').innerHTML = `
+    <div class="predict-signal-card ${signalClass}">
+      <div class="signal-label">${data.ticker} · 使用 ${friendlyModel} 预测</div>
+      <div class="signal-action">${signalMap[data.latest_signal] || data.latest_signal}</div>
+      <div style="font-size:14px;color:var(--text-dim);margin:8px 0 4px;line-height:1.6">
+        ${explainMap[data.latest_signal] || ''}。信号强度：<b style="color:var(--text-secondary)">${strength}</b>
+      </div>
+      <div style="margin-top:10px">
+        <details style="cursor:pointer">
+          <summary style="font-size:12px;color:var(--text-dim);user-select:none">展开技术细节</summary>
+          <div class="signal-meta" style="margin-top:6px">
+            预测得分: ${data.latest_score.toFixed(6)} &nbsp;|&nbsp;
+            买入阈值: ${data.threshold.toFixed(6)} &nbsp;|&nbsp;
+            预测日期范围: ${data.prediction_range[0]} ~ ${data.prediction_range[1]}
+          </div>
+        </details>
+      </div>
+    </div>
+  `;
+
+  // Timeline with human-readable signals
+  const timeline = document.getElementById('scanPredictTimeline');
+  const signals = data.signals || [];
+  const reversed = [...signals].reverse();
+  timeline.innerHTML = reversed.map(s => {
+    const cls = s.signal;
+    const label = signalMap[s.signal] || s.signal;
+    return `<div class="predict-row">
+      <span class="pr-date">${s.date}</span>
+      <span class="pr-signal ${cls}">${label}</span>
+    </div>`;
+  }).join('');
+}
+
+async function loadScanHistory() {
+  try {
+    const resp = await fetch(`${API_BASE}/api/scan/list`);
+    if (!resp.ok) return;
+    const jobs = await resp.json();
+    const list = document.getElementById('scanHistoryList');
+    if (jobs.length === 0) {
+      list.innerHTML = '<div style="color:var(--text-dim);font-size:13px;padding:10px 0">暂无历史记录</div>';
+      return;
+    }
+    list.innerHTML = jobs.map(j => {
+      const styleLabel = j.trading_style === 'ultra_short' ? '超短线' : '波段';
+      const dsLabel = j.data_source === 'db' ? 'DB' : j.data_source === 'yfinance' ? 'YF' : 'BS';
+      let statusClass = 's-' + j.status;
+      let statusText = j.status;
+      if (j.status === 'running') statusText = `运行中 (${j.completed_models || 0}/${j.total_models || 0})`;
+      else if (j.status === 'completed') statusText = '已完成';
+      else if (j.status === 'failed') statusText = '失败';
+      else if (j.status === 'pending') { statusText = '等待中'; statusClass = 's-running'; }
+      const bestText = j.best_model ? `最优: ${j.best_model}` : '';
+      const time = j.created_at ? j.created_at.substring(0, 16).replace('T', ' ') : '';
+
+      return `<div class="scan-history-item" onclick="showScanDetail('${j.id}')">
+        <span class="shi-ticker">${j.ticker}</span>
+        <span class="shi-style">${dsLabel} · ${styleLabel}</span>
+        <span class="shi-status ${statusClass}">${statusText}</span>
+        <span class="shi-best">${bestText}</span>
+        <span class="shi-time">${time}</span>
+      </div>`;
+    }).join('');
+  } catch (e) { /* server offline */ }
+}
+
+// ===== 快速预测 =====
+let quickStyle = 'ultra_short';
+
+function selectQuickStyle(el) {
+  el.parentElement.querySelectorAll('.scan-style-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  quickStyle = el.dataset.style;
+}
+
+async function runQuickPredict() {
+  const ticker = document.getElementById('quickTicker').value.trim().toUpperCase();
+  if (!ticker) { alert('请输入股票代码'); return; }
+
+  const btn = document.getElementById('quickPredictBtn');
+  btn.disabled = true;
+  btn.textContent = '预测中...';
+
+  document.getElementById('quickResultSection').classList.add('hidden');
+  document.getElementById('quickErrorSection').classList.add('hidden');
+
+  try {
+    const resp = await fetch('/api/quick-predict', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ticker, trading_style: quickStyle }),
+    });
+
+    if (!resp.ok) {
+      const err = await resp.json();
+      throw new Error(err.detail || '预测失败');
+    }
+
+    const data = await resp.json();
+    const pred = data.prediction;
+
+    document.getElementById('quickResultSection').classList.remove('hidden');
+
+    const sigEl = document.getElementById('qSignal');
+    const sig = pred.latest_signal;
+    sigEl.textContent = sig === 'buy' ? '买入' : sig === 'sell' ? '卖出' : '持有';
+    sigEl.className = 'sc-value ' + (sig === 'buy' ? 'positive' : sig === 'sell' ? 'negative' : '');
+    sigEl.style.fontSize = '24px';
+
+    document.getElementById('qScore').textContent = pred.latest_score.toFixed(4);
+    document.getElementById('qThreshold').textContent = pred.threshold.toFixed(4);
+    document.getElementById('qModel').textContent = data.model_class || pred.model_class;
+
+    if (data.source === 'cache') {
+      document.getElementById('qCacheInfo').textContent = '缓存结果，来自 ' + (data.cached_at || '').split('T')[0];
+    } else {
+      document.getElementById('qCacheInfo').textContent = '刚刚生成的新鲜预测';
+    }
+
+    const signals = pred.signals || [];
+    const recent = signals.slice(-30);
+    document.getElementById('quickSignalTable').innerHTML = recent.map(s => {
+      const sigClass = s.signal === 'buy' ? 'positive' : s.signal === 'sell' ? 'negative' : '';
+      const sigLabel = s.signal === 'buy' ? '买入' : s.signal === 'sell' ? '卖出' : '持有';
+      return `<tr>
+        <td>${s.date}</td>
+        <td>${s.score.toFixed(4)}</td>
+        <td class="${sigClass}" style="font-weight:600">${sigLabel}</td>
+      </tr>`;
+    }).reverse().join('');
+
+  } catch (e) {
+    document.getElementById('quickErrorSection').classList.remove('hidden');
+    document.getElementById('quickErrorMsg').textContent = e.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '立即预测';
+  }
+}
+
+// ===== INIT =====
+document.addEventListener('DOMContentLoaded', () => {
+  renderModelCards();
+  updateConfigPreview();
+  fetchModelAvailability();
+  loadScanHistory();
+
+  // Add live config update listeners
+  document.querySelectorAll('#pageConfig select, #pageConfig input').forEach(el => {
+    el.addEventListener('change', updateConfigPreview);
+  });
+});
+</script>
+
+</body>
+</html>
