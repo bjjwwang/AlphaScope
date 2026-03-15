@@ -272,6 +272,57 @@ def compute_alpha_score(model_results: list[dict]) -> dict:
     }
 
 
+def _alpha_from_prediction(prediction: dict, ticker: str) -> dict:
+    """Build a simplified AlphaScore from a single-model Quick Predict result."""
+    signals = prediction.get("signals", [])
+    if not signals:
+        return {"score": 5, "label": "Neutral", "signal": "hold",
+                "reason": "Insufficient data", "details": {}}
+
+    latest = signals[-1] if signals else {}
+    latest_signal = latest.get("signal", "hold")
+    latest_score = latest.get("score", 0)
+    threshold = prediction.get("threshold", 0)
+
+    # Count buy/sell/hold signals
+    buy_count = sum(1 for s in signals if s.get("signal") == "buy")
+    sell_count = sum(1 for s in signals if s.get("signal") == "sell")
+    total = len(signals)
+    buy_ratio = buy_count / total if total else 0.5
+
+    # Score: map buy_ratio 0→1 to AlphaScore 1→10
+    raw = buy_ratio * 10
+    score = max(1, min(10, round(raw)))
+
+    if score >= 7:
+        signal = "buy"
+        label = "Strong Buy" if score >= 9 else "Bullish"
+    elif score >= 4:
+        signal = "hold"
+        label = "Neutral"
+    else:
+        signal = "sell"
+        label = "Bearish" if score >= 2 else "Strong Sell"
+
+    reason = f"{buy_count}/{total} days bullish (Quick Predict, {prediction.get('model_class', 'AI')})"
+
+    return {
+        "score": score,
+        "label": label,
+        "signal": signal,
+        "reason": reason,
+        "details": {
+            "profitable_models": buy_count,
+            "total_models": total,
+            "best_return": round(latest_score * 100, 2),
+            "best_excess": 0,
+            "avg_win_rate": round(buy_ratio * 100, 1),
+            "consensus": round(buy_ratio, 2),
+            "bh_return": 0,
+        },
+    }
+
+
 @app.get("/api/score/{ticker}")
 async def quick_score(ticker: str, trading_style: str = "swing"):
     """Quick AlphaScore lookup — checks cached predictions first, then full scans."""
@@ -295,13 +346,14 @@ async def quick_score(ticker: str, trading_style: str = "swing"):
         except (json.JSONDecodeError, TypeError):
             pass
 
-    # 2. Check cached prediction (without alpha score — just has prediction)
+    # 2. Check cached prediction (without alpha score — build one from prediction signals)
     if cached and cached.get("prediction_json"):
         try:
             prediction = json.loads(cached["prediction_json"])
+            alpha = _alpha_from_prediction(prediction, ticker)
             return {
                 "ticker": ticker,
-                "alpha_score": None,
+                "alpha_score": alpha,
                 "best_model": cached.get("model_class"),
                 "trading_style": trading_style,
                 "cached_at": cached.get("cached_at"),
