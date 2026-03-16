@@ -329,7 +329,7 @@ class ScanRunner:
                 }})
 
             completed_count += 1
-            pct = int(completed_count / total * 100)
+            pct = int(completed_count / total * 100) if total > 0 else 0
             self.emit({"event": "scan_progress", "data": {
                 "completed": completed_count, "total": total,
                 "current_model": mc, "pct": pct,

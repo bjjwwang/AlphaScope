@@ -270,7 +270,7 @@ class PretrainRunner:
             self.emit({"event": "pretrain_progress", "data": {
                 "completed": completed, "total": total,
                 "succeeded": succeeded, "failed": failed,
-                "pct": int(completed / total * 100),
+                "pct": int(completed / total * 100) if total > 0 else 0,
             }})
 
             # Free memory between models

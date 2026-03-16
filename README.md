@@ -172,6 +172,92 @@ python -m pytest backtest_server/tests/ -v
 
 298 tests, all passing. Tests run without Qlib/GPU via mocks.
 
+## Backend Config Validation (CLI)
+
+You can validate and run backtests from YAML/JSON config files directly — no frontend needed. This is useful for debugging frontend issues or running backtests in CI.
+
+### Validate only (dry run)
+
+```bash
+cd examples
+python -m backtest_server.validate_config backtest_server/sample_config.yaml --dry-run
+```
+
+### Run a full backtest
+
+```bash
+python -m backtest_server.validate_config backtest_server/sample_config.yaml
+# or with JSON output:
+python -m backtest_server.validate_config backtest_server/sample_config.yaml --json
+```
+
+### Config format (YAML)
+
+```yaml
+data_source: "yfinance"
+kline: "daily"
+target: ["AAPL"]
+
+model:
+  class: "LGBModel"    # Any of the 22 model classes
+  kwargs:               # Model-specific hyperparameters
+    num_leaves: 128
+    learning_rate: 0.05
+
+dataset:
+  handler: "Alpha158"
+  segments:
+    train: ["2025-02-05", "2025-10-31"]
+    valid: ["2025-11-01", "2025-12-31"]
+    test:  ["2026-01-01", "2026-03-11"]
+
+label: "Ref($close, -2)/Ref($close, -1) - 1"
+
+strategy:
+  class: "SignalThreshold"
+  buy_threshold: 0
+  capital: 100000
+```
+
+`module_path` and `dataset.class` are auto-resolved from the model class name. See `sample_config.yaml` for a complete example.
+
+### Debugging workflow
+
+If the frontend produces an error, copy the config from the browser console and save it as a `.yaml` file, then:
+
+```bash
+# 1. Validate the config structure
+python -m backtest_server.validate_config user_config.yaml --dry-run
+
+# 2. Run the backtest to reproduce the error
+python -m backtest_server.validate_config user_config.yaml
+```
+
+## Deployment Notes
+
+### PyTorch (required)
+
+All 22 models require PyTorch. For CPU-only servers (no GPU):
+
+```bash
+pip install torch --index-url https://download.pytorch.org/whl/cpu
+```
+
+This saves ~1.5 GB compared to the full CUDA bundle.
+
+### Qlib Calendar Sync
+
+When using `yfinance` as data source, the data pipeline automatically:
+1. Downloads OHLCV data from Yahoo Finance
+2. Converts to Qlib binary format via `dump_bin.py`
+3. **Merges the Qlib calendar** (`calendars/day.txt`) so that new dates are available
+
+If you see a "division by zero" error during feature loading, it usually means the Qlib calendar is stale (e.g., only goes to 2020) while your config references 2025+ dates. Re-downloading data for the target ticker via yfinance will fix this automatically.
+
+### Division by Zero Guards
+
+The data pipeline guards against division-by-zero when computing `factor = adj_close / close` by replacing zero close prices with NaN (then filling factor with 1.0). Similar guards exist in `technical_indicators.py`, `scanner.py`, and `pretrain_manager.py`.
+
 ## Tech Stack
 
 - **Backend:** FastAPI + SSE streaming + asyncio

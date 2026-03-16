@@ -104,7 +104,7 @@ def calculate_volume_ratio(volume: pd.Series, period: int = 5) -> pd.Series:
     量比 = 当前成交量 / 过去 N 日平均成交量
     """
     avg_volume = volume.rolling(window=period).mean().shift(1)
-    return volume / avg_volume
+    return volume / avg_volume.replace(0, float("nan"))
 
 
 def calculate_slope(series: pd.Series, period: int = 5) -> pd.Series:
@@ -120,6 +120,8 @@ def calculate_slope(series: pd.Series, period: int = 5) -> pd.Series:
         try:
             slope = np.polyfit(y, x.values, 1)[0]
             # 归一化斜率 (相对于价格的百分比变化)
+            if x.iloc[0] == 0:
+                return np.nan
             normalized_slope = slope / x.iloc[0] * 100
             # 转换为角度
             angle = np.degrees(np.arctan(normalized_slope))

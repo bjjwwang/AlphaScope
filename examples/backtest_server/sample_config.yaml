@@ -1,0 +1,26 @@
+data_source: "yfinance"
+kline: "daily"
+target: ["AAPL"]
+
+model:
+  class: "LGBModel"
+  kwargs:
+    num_leaves: 128
+    feature_fraction: 0.8
+    learning_rate: 0.05
+    n_estimators: 300
+
+dataset:
+  class: "DatasetH"
+  handler: "Alpha158"
+  segments:
+    train: ["2025-02-05", "2025-10-31"]
+    valid: ["2025-11-01", "2025-12-31"]
+    test:  ["2026-01-01", "2026-03-11"]
+
+label: "Ref($close, -2)/Ref($close, -1) - 1"
+
+strategy:
+  class: "SignalThreshold"
+  buy_threshold: 0
+  capital: 100000
