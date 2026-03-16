@@ -103,6 +103,15 @@ analysis = [
   "plotly",
   "statsmodels",
 ]
+server = [
+  "fastapi",
+  "uvicorn",
+  "pydantic>=2.0",
+  "httpx",
+  "yfinance",
+  "baostock",
+  "schedule",
+]
 client = [
   "python-socketio<6",
   "tables",

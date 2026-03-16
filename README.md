@@ -8,92 +8,55 @@
 
 ---
 
-## Features
+## Quick Start (Clone → Run)
 
-- **AlphaScore** — One number (0-10) that summarizes 22 models' consensus on any stock
-- **Auto Scan** — Trains 22 ML models (LightGBM, XGBoost, GRU, LSTM, Transformer, ALSTM, etc.) and ranks them by out-of-sample performance
-- **Quick Predict** — Instant signals from pre-trained models (seconds, not minutes)
-- **Out-of-Sample Proof** — All results use blind test data the models never saw during training
-- **Bilingual UI** — Full English and Chinese support
-- **Pitch Slides** — Built-in investor pitch deck with speaker notes
-
-## Architecture
-
-```
-examples/
-  backtest_server/          # FastAPI backend
-    config_schema.py        # Pydantic models (24 model classes)
-    config_converter.py     # Frontend JSON → Qlib config
-    data_pipeline.py        # Data: yfinance / SQLite DB / baostock
-    backtest_runner.py      # 6-step pipeline + SSE streaming
-    result_formatter.py     # DataFrame → BacktestResult
-    scanner.py              # Auto scan: 22 models ranked
-    predictor.py            # Future signal prediction
-    pretrain_manager.py     # Batch pre-training + quick predict
-    scheduled_scan.py       # CLI: pretrain, predict-batch, status
-    scan_db.py              # SQLite persistence (WAL mode)
-    server.py               # FastAPI + SSE + job store
-    tests/                  # 298 tests, all passing
-    data/                   # Data pipeline
-      cold_start.py         # One-time: download all US stock history
-      run_daily_update.py   # Daily: update prices + refresh predictions
-      stock_data_manager.py # SQLite data manager (yfinance)
-      us_stocks.txt         # 23,494 US stock tickers
-  landing.html              # English landing page
-  backtest_ui_en.html       # English app (Backtest + Quick Predict)
-  backtest_ui_v2.html       # Chinese app
-  pitch_slides.html         # English pitch deck
-```
-
-## Quick Start
-
-### Prerequisites
-
-- Python 3.10+
-- NVIDIA GPU (recommended for PyTorch models, not required for tree models)
-
-### 1. Install
+### 1. Clone and install
 
 ```bash
 git clone https://github.com/bjjwwang/AlphaScout.git
 cd AlphaScout
-pip install -e ".[dev]"
+pip install -e ".[server]"
 ```
 
-### 2. Prepare Qlib data
+The `[server]` extra installs FastAPI, uvicorn, yfinance, and other backend dependencies. If you only want the backtest server (without the full Qlib dev stack), you can instead do:
+
+```bash
+pip install -r examples/backtest_server/requirements.txt
+```
+
+### 2. Prepare Qlib market data
+
+Download US stock binary data used by Qlib's data loaders:
 
 ```bash
 python scripts/get_data.py qlib_data --target_dir ~/.qlib/qlib_data/us_data --region us
 ```
 
-### 3. Cold Start — Stock Database
+### 3. Cold start — download stock price history
 
-Download historical price data for all US stocks into a local SQLite database. This is a one-time setup (~23k tickers, takes several hours depending on network):
+This downloads historical OHLCV data for 23,000+ US stocks into a local SQLite database (`stock_data.db`). It takes several hours on first run but supports resume — re-run if interrupted:
 
 ```bash
-cd examples/backtest_server/data
-python cold_start.py
+python examples/backtest_server/data/cold_start.py
 ```
 
-This creates `stock_data.db` (several GB). The script supports resumption — if interrupted, just re-run it.
+### 4. Cold start — pre-train models
 
-### 4. Cold Start — Pre-train Models
-
-Quick Predict requires pre-trained models. Train them once on first setup:
+Quick Predict needs pre-trained models. Train them once:
 
 ```bash
 cd examples
 
-# Quick mode: train top 5 models (~20 min on GPU)
+# Quick mode (~20 min on GPU, 5 models):
 python -m backtest_server.scheduled_scan pretrain --quick
 
-# Full mode: train all 22 models (~2-3 hours)
+# Full mode (~2-3 hours, all 22 models):
 python -m backtest_server.scheduled_scan pretrain
 
-# Cache predictions for top SP500 stocks
+# Cache predictions for popular stocks:
 python -m backtest_server.scheduled_scan predict-batch --top 50
 
-# Verify everything is ready
+# Verify:
 python -m backtest_server.scheduled_scan status
 ```
 
@@ -104,72 +67,101 @@ cd examples
 python -m backtest_server
 ```
 
-The server starts at `http://localhost:8001`. Open it in your browser.
-
-### Routes
-
-| Route | Description |
-|-------|-------------|
-| `/` | English landing page |
-| `/cn` | Chinese landing page |
-| `/app` | English app (Backtest + Quick Predict) |
-| `/app-cn` | Chinese app |
-| `/slides` | English pitch deck |
-| `/slides-cn` | Chinese pitch deck |
+Open `http://localhost:8001` in your browser. That's it.
 
 ---
 
-## Daily Auto-Update
+## Daily Auto-Update (Cron)
 
-After the initial cold start, set up a daily cron job to keep data and predictions fresh. The pipeline runs **after US market close** (recommended: **5:30 PM Eastern**, which is 90 minutes after close to ensure data has settled):
+After the initial setup, schedule a daily job to refresh data and predictions. Run it **after US market close** — we recommend **5:30 PM Eastern** (90 min after close, so data has settled).
 
-### Option A: Crontab (recommended)
+### Crontab (recommended)
 
 ```bash
 crontab -e
 ```
 
-Add the following line (adjust path and timezone):
-
 ```cron
-# AlphaScout daily update — 5:30 PM ET, weekdays only
-# If your server is UTC, use 21:30 (= 17:30 ET during EDT)
-# If your server is US/Eastern, use 17:30
-30 21 * * 1-5 cd /path/to/AlphaScout/examples/backtest_server/data && python run_daily_update.py >> /tmp/alphascout_daily.log 2>&1
+# AlphaScout daily update — 5:30 PM ET (= 21:30 UTC during EDT, 22:30 UTC during EST)
+30 21 * * 1-5 cd /path/to/AlphaScout/examples/backtest_server/data && /path/to/python run_daily_update.py >> /tmp/alphascout_daily.log 2>&1
 ```
-
-### Option B: Daemon mode
-
-```bash
-cd examples/backtest_server/data
-python run_daily_update.py --daemon
-```
-
-Runs in the foreground, scheduling itself for 17:30 every weekday (server local time). Use `tmux` or `screen` to keep it alive.
 
 ### What the daily pipeline does
 
 | Step | Action | Time |
 |------|--------|------|
-| 1 | Fetch latest prices from yfinance into `stock_data.db` | ~10 min |
+| 1 | Fetch latest prices from yfinance → `stock_data.db` | ~10 min |
 | 2 | Rebuild Qlib binary format from updated DB | ~2 min |
-| 3 | Re-generate cached predictions for top 20 SP500 stocks | ~5 min |
+| 3 | Re-generate cached predictions for top 20 SP500 | ~5 min |
+
+### Alternative: daemon mode
+
+```bash
+python examples/backtest_server/data/run_daily_update.py --daemon
+```
+
+Runs in the foreground, auto-triggers at 17:30 every weekday (server local time). Use `tmux`/`screen` to keep alive.
 
 ---
 
+## Routes
+
+| Route | Description |
+|-------|-------------|
+| `/` | Landing page |
+| `/cn` | Landing page (Chinese) |
+| `/app` | Full app — Backtest + Quick Predict |
+| `/app-cn` | Full app (Chinese) |
+| `/slides` | Investor pitch deck |
+| `/slides-cn` | Pitch deck (Chinese) |
+
+## Features
+
+- **AlphaScore** — One number (0-10) summarizing 22 models' consensus
+- **Auto Scan** — Trains 22 ML models and ranks by out-of-sample excess return
+- **Quick Predict** — Instant signals from pre-trained models (seconds)
+- **Out-of-Sample Proof** — All numbers come from data the AI never saw during training
+- **Bilingual UI** — Full English and Chinese support
+
+## Architecture
+
+```
+examples/
+  backtest_server/
+    server.py               # FastAPI + SSE + serves all HTML pages
+    config_schema.py        # Pydantic v2 models (24 model classes)
+    config_converter.py     # Frontend JSON → Qlib config dicts
+    data_pipeline.py        # yfinance / SQLite DB → Qlib binary
+    backtest_runner.py      # 6-step pipeline + SSE progress streaming
+    result_formatter.py     # DataFrame → BacktestResult
+    scanner.py              # Auto scan: 22 models ranked
+    predictor.py            # Future signal prediction
+    pretrain_manager.py     # Batch pre-training + quick predict
+    scheduled_scan.py       # CLI: pretrain / predict-batch / status
+    scan_db.py              # SQLite persistence (WAL mode)
+    requirements.txt        # Standalone dependency list
+    tests/                  # 298 tests, all passing
+    data/
+      cold_start.py         # One-time: download all US stock history
+      daily_update.py       # One-time: incremental update
+      run_daily_update.py   # Daily pipeline: update + rebuild + predict
+      stock_data_manager.py # Core SQLite data manager
+      us_stocks.txt         # 23,494 US stock tickers
+  landing.html              # English landing page
+  backtest_ui_en.html       # English app
+  backtest_ui_v2.html       # Chinese app
+  pitch_slides.html         # Pitch deck (English)
+  pitch_slides_cn.html      # Pitch deck (Chinese)
+```
+
 ## 22 Models
 
-### Tree Models (CPU)
-LightGBM, XGBoost, CatBoost, Linear, Double Ensemble
-
-### Recurrent Neural Networks (GPU)
-LSTM, GRU, ALSTM — both cross-sectional and time-series variants
-
-### Attention Models (GPU)
-Transformer, GATs, LocalFormer — both cross-sectional and time-series variants
-
-### Other (GPU)
-TCN, TabNet, SFM, DNN, ADARNN
+| Category | Models |
+|----------|--------|
+| **Tree (CPU)** | LightGBM, XGBoost, CatBoost, Linear, Double Ensemble |
+| **RNN (GPU)** | LSTM, GRU, ALSTM — cross-sectional & time-series variants |
+| **Attention (GPU)** | Transformer, GATs, LocalFormer — cross-sectional & time-series |
+| **Other (GPU)** | TCN, TabNet, SFM, DNN, ADARNN |
 
 ## Running Tests
 
@@ -180,27 +172,27 @@ python -m pytest backtest_server/tests/ -v
 
 298 tests, all passing. Tests run without Qlib/GPU via mocks.
 
+## Tech Stack
+
+- **Backend:** FastAPI + SSE streaming + asyncio
+- **ML Engine:** [Microsoft Qlib](https://github.com/microsoft/qlib) + PyTorch
+- **Models:** LightGBM, XGBoost, CatBoost, PyTorch (LSTM/GRU/Transformer/etc.)
+- **Data:** Yahoo Finance → SQLite → Qlib binary
+- **Frontend:** Single-file HTML apps, dark mode, mobile-responsive
+
 ## Credit System (Planned)
 
-| Tier | Price | Credits/mo | What you get |
-|------|-------|------------|--------------|
+| Tier | Price | Credits/mo | Includes |
+|------|-------|------------|----------|
 | Free | $0 | 3 | Quick Predict only |
 | Pro | $19/mo | 50 | Full Scan + Quick Predict, all 22 models |
 | Power | $49/mo | 200 | API access, priority GPU queue |
 
 *1 Quick Predict = 1 credit, 1 Full Scan = 5 credits*
 
-## Tech Stack
-
-- **Backend:** FastAPI + SSE streaming + asyncio
-- **ML Engine:** [Microsoft Qlib](https://github.com/microsoft/qlib) + PyTorch
-- **Models:** LightGBM, XGBoost, CatBoost, PyTorch (LSTM/GRU/Transformer/etc.)
-- **Data:** Yahoo Finance, SQLite, Baostock
-- **Frontend:** Single-file HTML apps, dark mode, mobile-responsive
-
 ## License
 
-This project is built on [Microsoft Qlib](https://github.com/microsoft/qlib), licensed under the MIT License.
+Built on [Microsoft Qlib](https://github.com/microsoft/qlib) (MIT License).
 
 ## Acknowledgments
 

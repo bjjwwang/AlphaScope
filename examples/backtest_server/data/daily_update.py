@@ -1,31 +1,34 @@
 #!/usr/bin/env python3
 """
-增量更新脚本 - 更新已有股票的最新数据
+Incremental update — fetch latest prices for stocks already in the database.
 
-使用方法:
-    python daily_update.py
+Usage (from any directory):
+    python examples/backtest_server/data/daily_update.py
 """
+import os
+import sys
 from datetime import datetime
-from stock_data_manager import StockDataManager
 
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, _SCRIPT_DIR)
+
+from stock_data_manager import StockDataManager
 
 if __name__ == "__main__":
     print("=" * 60)
-    print(f"增量更新 - {datetime.now().strftime('%Y-%m-%d %H:%M')}")
+    print(f"AlphaScout — Incremental Update — {datetime.now():%Y-%m-%d %H:%M}")
     print("=" * 60)
 
-    manager = StockDataManager(db_path="stock_data.db")
+    db_path = os.path.join(_SCRIPT_DIR, "stock_data.db")
+    manager = StockDataManager(db_path=db_path)
 
-    # 显示当前状态
     progress = manager.get_overall_progress()
-    print(f"\n当前数据库: {progress['total']} 只股票")
+    print(f"\nDatabase: {progress['total']} stocks")
 
-    # 执行更新
-    print("\n开始更新...")
+    print("\nUpdating...")
     result = manager.daily_update()
 
-    # 显示结果
-    print(f"\n更新完成:")
-    print(f"  - 更新成功: {result['updated']}")
-    print(f"  - 更新失败: {result['failed']}")
-    print(f"  - 跳过(已是最新): {result['skipped']}")
+    print(f"\nDone:")
+    print(f"  Updated:  {result['updated']}")
+    print(f"  Failed:   {result['failed']}")
+    print(f"  Skipped:  {result['skipped']}")

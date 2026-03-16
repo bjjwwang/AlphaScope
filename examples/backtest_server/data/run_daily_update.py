@@ -49,8 +49,8 @@ def step_dump_qlib_data():
     try:
         # data_pipeline.dump_db_to_qlib() handles this
         sys.path.insert(0, os.path.join(_SCRIPT_DIR, ".."))
-        from backtest_server.data_pipeline import dump_db_to_qlib
-        dump_db_to_qlib()
+        from backtest_server.data_pipeline import dump_all_db_to_qlib
+        dump_all_db_to_qlib()
         print("  Qlib data refreshed.")
     except Exception as e:
         print(f"  Warning: Qlib dump failed ({e}). Predictions will use stale data.")
