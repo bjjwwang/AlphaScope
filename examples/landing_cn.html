@@ -4,52 +4,54 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AlphaScout — AI 股票信号平台</title>
+<link rel="icon" type="image/png" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📈</text></svg>">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&display=swap');
+
   :root {
-    --bg: #0a0e17; --card: #131a2b; --border: #1e2d45;
-    --text: #c4d3e8; --dim: #6b7f99; --bright: #eaf0f8;
-    --blue: #4d9fff; --green: #34d399; --orange: #f59e0b;
-    --red: #ef4444; --purple: #a78bfa;
-    --grad: linear-gradient(135deg, #4d9fff, #34d399);
+    --bg: #020617; --card: #0f172a; --card2: #1e293b; --border: #1e293b;
+    --text: #94a3b8; --dim: #64748b; --bright: #f1f5f9;
+    --accent: #34d399; --accent2: #14b8a6;
+    --green: #34d399; --red: #ef4444; --orange: #f59e0b;
+    --grad: linear-gradient(135deg, #34d399, #14b8a6);
   }
   * { margin:0; padding:0; box-sizing:border-box; }
   html { scroll-behavior: smooth; }
-  body { font-family:'Inter',-apple-system,sans-serif; background:var(--bg); color:var(--text); line-height:1.7; overflow-x:hidden; }
-  a { color:var(--blue); text-decoration:none; }
+  body { font-family:'Inter',-apple-system,sans-serif; background:var(--bg); background-image:radial-gradient(#334155 1px,transparent 1px); background-size:30px 30px; color:var(--text); line-height:1.7; overflow-x:hidden; -webkit-font-smoothing:antialiased; }
+  ::selection { background:var(--accent); color:var(--bg); }
+  a { color:var(--accent); text-decoration:none; }
 
-  /* NAV */
-  nav { position:fixed; top:0; width:100%; z-index:100; background:rgba(10,14,23,0.88); backdrop-filter:blur(20px); border-bottom:1px solid var(--border); padding:14px 40px; display:flex; align-items:center; justify-content:space-between; }
-  .nav-logo { font-size:20px; font-weight:800; background:var(--grad); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+  nav { position:fixed; top:0; width:100%; z-index:100; background:rgba(2,6,23,0.80); backdrop-filter:blur(16px); border-bottom:1px solid var(--border); padding:14px 40px; display:flex; align-items:center; justify-content:space-between; }
+  .nav-logo { font-size:22px; font-weight:800; letter-spacing:-0.5px; background:var(--grad); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
   .nav-r { display:flex; gap:28px; align-items:center; }
-  .nav-r a { color:var(--dim); font-size:13px; font-weight:500; }
-  .nav-r a:hover { color:var(--bright); }
-  .nav-cta { background:var(--grad); color:#fff!important; padding:7px 18px; border-radius:8px; font-weight:600; -webkit-text-fill-color:#fff; }
+  .nav-r a { color:var(--dim); font-size:13px; font-weight:500; transition:color .2s; }
+  .nav-r a:hover { color:var(--accent); }
+  .nav-cta { background:var(--accent); color:var(--bg)!important; padding:8px 20px; border-radius:100px; font-weight:700; -webkit-text-fill-color:var(--bg); transition:all .2s; }
+  .nav-cta:hover { background:#6ee7b7; }
 
-  /* ===== HERO — SEARCH-FIRST ===== */
   .hero { min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:120px 24px 60px; position:relative; }
-  .hero::before { content:''; position:absolute; top:-100px; left:50%; transform:translateX(-50%); width:900px; height:900px; border-radius:50%; background:radial-gradient(circle,#4d9fff0a 0%,transparent 70%); pointer-events:none; }
-  .hero-pill { display:inline-flex; align-items:center; gap:8px; background:var(--card); border:1px solid var(--border); border-radius:100px; padding:5px 14px; font-size:12px; color:var(--green); font-weight:600; margin-bottom:20px; }
-  .hero-pill .dot { width:6px; height:6px; border-radius:50%; background:var(--green); animation:pulse 2s infinite; }
-  @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:.4;} }
-  .hero h1 { font-size:clamp(32px,5.5vw,64px); font-weight:900; line-height:1.08; color:var(--bright); max-width:760px; margin-bottom:14px; }
+  .hero::before { content:''; position:absolute; top:-200px; left:50%; transform:translateX(-50%); width:800px; height:800px; border-radius:50%; background:radial-gradient(circle,rgba(52,211,153,0.06) 0%,transparent 70%); pointer-events:none; }
+  .hero-pill { display:inline-flex; align-items:center; gap:8px; border:1px solid rgba(52,211,153,0.3); background:rgba(52,211,153,0.08); border-radius:100px; padding:6px 16px; font-size:12px; color:var(--accent); font-weight:600; margin-bottom:24px; }
+  .hero-pill .dot { width:6px; height:6px; border-radius:50%; background:var(--accent); animation:pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+  .hero h1 { font-size:clamp(34px,5.5vw,68px); font-weight:900; line-height:1.06; color:var(--bright); max-width:780px; margin-bottom:16px; letter-spacing:-1px; }
   .hero h1 em { font-style:normal; background:var(--grad); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
-  .hero .sub { font-size:17px; color:var(--dim); max-width:520px; margin-bottom:32px; line-height:1.6; }
+  .hero .sub { font-size:17px; color:var(--dim); max-width:520px; margin-bottom:36px; line-height:1.7; }
 
-  /* SEARCH BOX */
-  .hero-search { display:flex; align-items:center; background:var(--card); border:2px solid var(--border); border-radius:14px; padding:6px 6px 6px 20px; max-width:480px; width:100%; transition:border-color .3s; }
-  .hero-search:focus-within { border-color:var(--blue); }
+  .hero-search { display:flex; align-items:center; background:var(--card); border:2px solid var(--border); border-radius:16px; padding:6px 6px 6px 20px; max-width:500px; width:100%; transition:border-color .3s; }
+  .hero-search:focus-within { border-color:var(--accent); }
   .hero-search input { flex:1; background:none; border:none; outline:none; color:var(--bright); font-size:16px; font-weight:500; font-family:inherit; }
   .hero-search input::placeholder { color:var(--dim); }
-  .hero-search button { background:var(--grad); border:none; color:#fff; padding:12px 24px; border-radius:10px; font-size:14px; font-weight:700; cursor:pointer; white-space:nowrap; transition:transform .2s; font-family:inherit; }
-  .hero-search button:hover { transform:translateY(-1px); }
-  .hero-hint { font-size:12px; color:var(--dim); margin-top:12px; }
-  .hero-hint b { color:var(--text); }
+  .hero-search button { background:var(--accent); border:none; color:var(--bg); padding:12px 26px; border-radius:12px; font-size:14px; font-weight:700; cursor:pointer; white-space:nowrap; transition:all .2s; font-family:inherit; }
+  .hero-search button:hover { background:#6ee7b7; transform:translateY(-1px); }
+  .hero-hint { font-size:12px; color:var(--dim); margin-top:14px; }
+  .hero-hint b { color:var(--text); cursor:pointer; transition:color .2s; }
+  .hero-hint b:hover { color:var(--accent); }
 
-  /* SCORE RESULT (hidden by default) */
   .score-result { display:none; margin-top:28px; animation:fadeUp .4s ease; max-width:420px; width:100%; }
-  @keyframes fadeUp { from{opacity:0;transform:translateY(12px);} to{opacity:1;transform:translateY(0);} }
-  .score-card { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:28px; text-align:center; }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+  .score-card { background:var(--card); border:1px solid var(--border); border-radius:24px; padding:32px; text-align:center; }
   .score-ticker { font-size:14px; color:var(--dim); font-weight:600; letter-spacing:1px; text-transform:uppercase; }
   .score-ring { width:100px; height:100px; margin:16px auto; position:relative; }
   .score-ring svg { width:100%; height:100%; transform:rotate(-90deg); }
@@ -62,85 +64,83 @@
   .score-details { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:18px; padding-top:16px; border-top:1px solid var(--border); }
   .score-detail .val { font-size:16px; font-weight:700; color:var(--bright); }
   .score-detail .lbl { font-size:11px; color:var(--dim); }
-  .score-cta { display:inline-block; margin-top:18px; background:var(--grad); color:#fff; padding:10px 28px; border-radius:10px; font-size:14px; font-weight:600; }
-  .score-cta:hover { transform:translateY(-1px); }
+  .score-cta { display:inline-block; margin-top:18px; background:var(--accent); color:var(--bg); padding:10px 28px; border-radius:100px; font-size:14px; font-weight:700; transition:all .2s; }
+  .score-cta:hover { background:#6ee7b7; transform:translateY(-1px); }
 
-  /* STATS BAR */
-  .stats-bar { display:flex; gap:40px; margin-top:48px; padding-top:32px; border-top:1px solid var(--border); flex-wrap:wrap; justify-content:center; }
+  .stats-bar { display:flex; gap:48px; margin-top:52px; padding-top:36px; border-top:1px solid var(--border); flex-wrap:wrap; justify-content:center; }
   .sb-item { text-align:center; }
   .sb-item .n { font-size:28px; font-weight:800; color:var(--bright); }
   .sb-item .l { font-size:12px; color:var(--dim); margin-top:2px; }
 
-  /* ===== SHOWCASE — PAST WINNERS ===== */
-  section { padding:80px 40px; max-width:1200px; margin:0 auto; }
-  .stag { font-size:12px; font-weight:700; color:var(--blue); text-transform:uppercase; letter-spacing:2px; margin-bottom:10px; }
-  section h2 { font-size:34px; font-weight:800; color:var(--bright); margin-bottom:12px; line-height:1.2; }
-  section .desc { font-size:15px; color:var(--dim); max-width:540px; margin-bottom:40px; }
+  section { padding:80px 40px; max-width:1100px; margin:0 auto; }
+  .stag { display:inline-block; padding:6px 18px; border-radius:100px; border:1px solid rgba(52,211,153,0.3); background:rgba(52,211,153,0.08); font-size:11px; font-weight:700; color:var(--accent); text-transform:uppercase; letter-spacing:2px; margin-bottom:14px; }
+  section h2 { font-size:34px; font-weight:800; color:var(--bright); margin-bottom:12px; line-height:1.2; letter-spacing:-0.5px; }
+  section .desc { font-size:15px; color:var(--dim); max-width:560px; margin-bottom:44px; }
 
   .showcase-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:20px; }
-  .showcase-card { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:24px; transition:border-color .3s; }
-  .showcase-card:hover { border-color:var(--blue); }
+  .showcase-card { background:var(--card); border:1px solid var(--border); border-radius:24px; padding:28px; transition:all .3s ease; }
+  .showcase-card:hover { transform:translateY(-8px); box-shadow:0 20px 40px rgba(16,185,129,0.12); border-color:rgba(52,211,153,0.3); }
   .sc-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
   .sc-ticker { font-size:18px; font-weight:800; color:var(--bright); }
-  .sc-score { font-size:13px; font-weight:700; padding:4px 10px; border-radius:6px; }
-  .sc-score.high { background:#34d39920; color:var(--green); }
-  .sc-score.mid { background:#f59e0b20; color:var(--orange); }
-  .sc-model { font-size:12px; color:var(--dim); margin-bottom:12px; }
+  .sc-score { font-size:12px; font-weight:700; padding:4px 12px; border-radius:100px; }
+  .sc-score.high { background:rgba(52,211,153,0.15); color:var(--green); }
+  .sc-score.mid { background:rgba(245,158,11,0.15); color:var(--orange); }
+  .sc-model { font-size:12px; color:var(--dim); margin-bottom:14px; }
   .sc-metrics { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
   .sc-m { text-align:center; }
   .sc-m .v { font-size:15px; font-weight:700; }
   .sc-m .v.pos { color:var(--green); }
   .sc-m .v.neg { color:var(--red); }
-  .sc-m .k { font-size:10px; color:var(--dim); }
+  .sc-m .k { font-size:10px; color:var(--dim); margin-top:2px; }
 
-  /* ===== SOCIAL PROOF ===== */
-  .proof-bar { display:flex; gap:32px; flex-wrap:wrap; justify-content:center; align-items:center; padding:40px; border-top:1px solid var(--border); border-bottom:1px solid var(--border); }
+  .proof-bar { display:flex; gap:36px; flex-wrap:wrap; justify-content:center; align-items:center; padding:44px 40px; border-top:1px solid var(--border); border-bottom:1px solid var(--border); }
   .proof-item { font-size:13px; color:var(--dim); display:flex; align-items:center; gap:8px; }
-  .proof-item b { color:var(--bright); font-size:15px; }
+  .proof-item b { color:var(--bright); font-size:14px; }
 
-  /* ===== HOW IT WORKS ===== */
   .steps-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:24px; }
-  .step-card { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:28px; text-align:center; }
-  .step-n { width:44px; height:44px; border-radius:50%; background:var(--grad); color:#fff; font-size:18px; font-weight:800; display:flex; align-items:center; justify-content:center; margin:0 auto 14px; }
-  .step-card h3 { font-size:17px; font-weight:700; color:var(--bright); margin-bottom:6px; }
-  .step-card p { font-size:13px; color:var(--dim); }
+  .step-card { background:var(--card); border:1px solid var(--border); border-radius:24px; padding:32px; text-align:center; transition:all .3s ease; }
+  .step-card:hover { transform:translateY(-6px); box-shadow:0 16px 32px rgba(16,185,129,0.1); border-color:rgba(52,211,153,0.25); }
+  .step-n { width:48px; height:48px; border-radius:16px; background:var(--accent); color:var(--bg); font-size:18px; font-weight:800; display:flex; align-items:center; justify-content:center; margin:0 auto 16px; }
+  .step-card h3 { font-size:17px; font-weight:700; color:var(--bright); margin-bottom:8px; }
+  .step-card p { font-size:13px; color:var(--dim); line-height:1.6; }
 
-  /* ===== EXPLAINER — WHY TRUST AI ===== */
-  .trust-grid { display:grid; grid-template-columns:1fr 1fr; gap:24px; }
-  .trust-card { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:24px; }
-  .trust-card h3 { font-size:16px; font-weight:700; color:var(--bright); margin-bottom:6px; }
-  .trust-card p { font-size:13px; color:var(--dim); line-height:1.6; }
+  .trust-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+  .trust-card { background:var(--card); border:1px solid var(--border); border-radius:24px; padding:28px; transition:all .3s ease; }
+  .trust-card:hover { border-color:rgba(52,211,153,0.25); }
+  .trust-card h3 { font-size:16px; font-weight:700; color:var(--bright); margin-bottom:8px; }
+  .trust-card p { font-size:13px; color:var(--dim); line-height:1.7; }
 
-  /* ===== COMPARE ===== */
-  .cmp-table { width:100%; border-collapse:collapse; background:var(--card); border:1px solid var(--border); border-radius:16px; overflow:hidden; }
-  .cmp-table th { padding:14px 18px; text-align:left; font-size:13px; font-weight:600; color:var(--dim); background:#0d1220; border-bottom:1px solid var(--border); }
-  .cmp-table td { padding:12px 18px; font-size:14px; border-bottom:1px solid var(--border); }
+  .cmp-wrap { background:var(--card); border:1px solid var(--border); border-radius:24px; overflow:hidden; }
+  .cmp-table { width:100%; border-collapse:collapse; }
+  .cmp-table th { padding:16px 18px; text-align:left; font-size:12px; font-weight:600; color:var(--dim); background:rgba(15,23,42,0.6); border-bottom:1px solid var(--border); text-transform:uppercase; letter-spacing:0.5px; }
+  .cmp-table td { padding:14px 18px; font-size:14px; border-bottom:1px solid rgba(30,41,59,0.5); }
   .cmp-table tr:last-child td { border:none; }
-  .cmp-table .us { background:#4d9fff08; }
-  .cmp-table .us-h { background:#4d9fff12; color:var(--blue); font-weight:700; }
+  .cmp-table .us { background:rgba(52,211,153,0.04); }
+  .cmp-table .us-h { background:rgba(52,211,153,0.08); color:var(--accent); font-weight:700; }
   .y { color:var(--green); font-weight:700; }
-  .n { color:var(--red); opacity:.4; }
+  .n { color:var(--red); opacity:.35; }
 
-  /* ===== CTA ===== */
-  .final-cta { text-align:center; padding:80px 40px; background:linear-gradient(135deg,#4d9fff10,#34d39910); border-radius:24px; margin:0 40px 60px; }
-  .final-cta h2 { font-size:36px; font-weight:800; color:var(--bright); margin-bottom:12px; }
-  .final-cta p { font-size:15px; color:var(--dim); margin-bottom:28px; }
-  .final-cta .btn { background:var(--grad); color:#fff; padding:14px 40px; border-radius:10px; font-size:16px; font-weight:700; display:inline-block; }
+  .final-cta { text-align:center; padding:80px 40px; background:var(--card); border:1px solid var(--border); border-radius:32px; margin:0 40px 60px; position:relative; overflow:hidden; }
+  .final-cta::before { content:''; position:absolute; inset:0; background:linear-gradient(135deg,rgba(52,211,153,0.06),transparent); pointer-events:none; }
+  .final-cta h2 { font-size:36px; font-weight:800; color:var(--bright); margin-bottom:12px; position:relative; }
+  .final-cta p { font-size:15px; color:var(--dim); margin-bottom:28px; position:relative; }
+  .final-cta .btn { background:var(--accent); color:var(--bg); padding:16px 44px; border-radius:100px; font-size:16px; font-weight:700; display:inline-block; position:relative; transition:all .2s; box-shadow:0 8px 24px rgba(52,211,153,0.2); }
+  .final-cta .btn:hover { background:#6ee7b7; transform:translateY(-2px); box-shadow:0 12px 32px rgba(52,211,153,0.3); }
 
-  footer { text-align:center; padding:32px; font-size:12px; color:var(--dim); border-top:1px solid var(--border); }
+  footer { text-align:center; padding:36px; font-size:12px; color:var(--dim); border-top:1px solid var(--border); }
 
-  /* RESPONSIVE */
   @media(max-width:768px) {
     nav { padding:12px 16px; }
     .nav-r a:not(.nav-cta) { display:none; }
     section { padding:50px 16px; }
     .hero { padding:100px 16px 40px; }
-    .hero h1 { font-size:28px; }
+    .hero h1 { font-size:28px; letter-spacing:-0.5px; }
     .showcase-grid,.steps-grid { grid-template-columns:1fr; }
     .trust-grid { grid-template-columns:1fr; }
     .stats-bar { gap:20px; }
-    .final-cta { margin:0 12px 40px; padding:50px 16px; }
+    .final-cta { margin:0 12px 40px; padding:50px 20px; }
     .score-details { grid-template-columns:repeat(3,1fr); gap:8px; }
+    .cmp-table th,.cmp-table td { padding:10px 10px; font-size:12px; }
   }
 </style>
 </head>
@@ -160,9 +160,9 @@
 
 <!-- ===== HERO ===== -->
 <div class="hero">
-  <div class="hero-pill"><div class="dot"></div> 实时分析 &mdash; 正在分析 5,000+ 只股票</div>
+  <div class="hero-pill"><div class="dot"></div> 实时分析 &mdash; 正在分析 600+ 只股票</div>
   <h1>你的股票该<em>买</em>、该<em>卖</em>、还是<em>持有</em>？</h1>
-  <p class="sub">20+ 个 AI 模型全方位分析你的股票。给你一个清晰的答案 &mdash; 无需编程，无需猜测。</p>
+  <p class="sub">22 个 AI 模型全方位分析你的股票。给你一个清晰的答案 &mdash; 无需编程，无需猜测。</p>
 
   <!-- SEARCH BOX -->
   <div class="hero-search" id="heroSearch">
@@ -177,8 +177,8 @@
   </div>
 
   <div class="stats-bar">
-    <div class="sb-item"><div class="n">20+</div><div class="l">AI 模型</div></div>
-    <div class="sb-item"><div class="n">5,000+</div><div class="l">只股票</div></div>
+    <div class="sb-item"><div class="n">22</div><div class="l">AI 模型</div></div>
+    <div class="sb-item"><div class="n">600+</div><div class="l">只股票</div></div>
     <div class="sb-item"><div class="n">GPU</div><div class="l">加速</div></div>
     <div class="sb-item"><div class="n">免费</div><div class="l">Beta 期间免费</div></div>
   </div>
@@ -225,7 +225,7 @@
 <div class="proof-bar">
   <div class="proof-item">基于 <b>Microsoft Qlib</b> 构建</div>
   <div class="proof-item">由 <b>NVIDIA RTX PRO 6000</b> 驱动</div>
-  <div class="proof-item"><b>20+</b> 个生产级 ML 模型</div>
+  <div class="proof-item"><b>22</b> 个生产级 ML 模型</div>
   <div class="proof-item"><b>样本外</b>测试结果</div>
   <div class="proof-item">构建于 <b>UNSW 悉尼</b></div>
 </div>
@@ -239,11 +239,11 @@
     <div class="step-card">
       <div class="step-n">1</div>
       <h3>选择股票</h3>
-      <p>输入任意代码 &mdash; AAPL、TSLA、NVDA。我们支持 5,000+ 只美股。可选择日内交易或波段交易风格。</p>
+      <p>输入任意代码 &mdash; AAPL、TSLA、NVDA。我们支持 600+ 只美股。可选择日内交易或波段交易风格。</p>
     </div>
     <div class="step-card">
       <div class="step-n">2</div>
-      <h3>AI 训练 20+ 个模型</h3>
+      <h3>AI 训练 22 个模型</h3>
       <p>LightGBM、LSTM、Transformer、GATs 以及更多模型同时在你的股票数据上训练。GPU 加速，总共约10分钟。</p>
     </div>
     <div class="step-card">
@@ -265,7 +265,7 @@
       <p>模型在训练期间从未见过测试数据。你看到的每一个收益率都是真实的预测表现，而非曲线拟合。我们展示精确的训练/验证/测试日期范围。</p>
     </div>
     <div class="trust-card">
-      <h3>20+ 个模型公平竞争</h3>
+      <h3>22 个模型公平竞争</h3>
       <p>每个模型使用相同的数据、相同的特征、相同的测试周期。最佳模型凭实力胜出。你可以查看每个模型的单独表现、胜率和交易次数。</p>
     </div>
     <div class="trust-card">
@@ -284,6 +284,7 @@
   <div class="stag">对比竞品</div>
   <h2>他们给你工具，我们给你答案。</h2>
   <p class="desc">大多数平台让你自己动手。AlphaScout 帮你搞定一切。</p>
+  <div class="cmp-wrap">
   <table class="cmp-table">
     <thead><tr>
       <th style="width:180px">功能</th>
@@ -295,12 +296,13 @@
     <tbody>
       <tr><td>AI 驱动信号</td><td class="n">&#10007;</td><td>手动</td><td class="y">&#10003;</td><td class="us"><span class="y">&#10003;</span> 自动</td></tr>
       <tr><td>无需编程</td><td class="y">&#10003;</td><td class="n">&#10007;</td><td class="y">&#10003;</td><td class="us"><span class="y">&#10003;</span></td></tr>
-      <tr><td>多模型对比</td><td class="n">&#10007;</td><td class="n">&#10007;</td><td class="n">&#10007;</td><td class="us"><span class="y">&#10003;</span> 20+ 个模型</td></tr>
+      <tr><td>多模型对比</td><td class="n">&#10007;</td><td class="n">&#10007;</td><td class="n">&#10007;</td><td class="us"><span class="y">&#10003;</span> 22 个模型</td></tr>
       <tr><td>可解释结果</td><td class="n">&#10007;</td><td>部分</td><td class="y">&#10003;</td><td class="us"><span class="y">&#10003;</span> 完全</td></tr>
       <tr><td>样本外验证</td><td class="n">&#10007;</td><td class="y">&#10003;</td><td>部分</td><td class="us"><span class="y">&#10003;</span></td></tr>
       <tr><td>价格</td><td>$15&ndash;60/月</td><td>$8&ndash;40/月</td><td>$13&ndash;70/月</td><td class="us" style="font-weight:700;color:var(--green);">免费 (Beta)</td></tr>
     </tbody>
   </table>
+  </div>
 </section>
 
 <!-- ===== FINAL CTA ===== -->
@@ -341,7 +343,7 @@ async function lookupScore() {
         <div style="font-size:48px;margin:16px 0;">?</div>
         <div class="score-label" style="color:var(--dim);">暂无扫描数据</div>
         <div class="score-reason">该股票尚未分析。运行完整 AI 扫描以获取其 AlphaScore。</div>
-        <a class="score-cta" href="/app">立即扫描 ${ticker} &rarr;</a>
+        <a class="score-cta" href="/app?ticker=${encodeURIComponent(ticker)}">立即扫描 ${ticker} &rarr;</a>
       `;
       return;
     }
@@ -375,7 +377,7 @@ async function lookupScore() {
         <div class="score-detail"><div class="val">${d.bh_return >= 0 ? '+' : ''}${d.bh_return}%</div><div class="lbl">买入持有</div></div>
         <div class="score-detail"><div class="val">${d.avg_win_rate}%</div><div class="lbl">平均胜率</div></div>
       </div>
-      <a class="score-cta" href="/app">查看完整分析 &rarr;</a>
+      <a class="score-cta" href="/app?ticker=${encodeURIComponent(data.ticker)}">查看完整分析 &rarr;</a>
     `;
   } catch (e) {
     card.innerHTML = `<div style="color:var(--red);padding:20px;">加载失败，请重试。</div>`;
