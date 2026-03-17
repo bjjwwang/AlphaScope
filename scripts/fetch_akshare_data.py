@@ -15,9 +15,10 @@ from pathlib import Path
 # ============================================================
 # 配置
 # ============================================================
-QLIB_DATA_DIR = Path(os.path.expanduser("~/.qlib/qlib_data/cn_data"))
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent
+QLIB_DATA_DIR = _PROJECT_ROOT / "data" / "qlib_data" / "cn_data"
 INSTRUMENTS_FILE = QLIB_DATA_DIR / "instruments" / "csi300_ext.txt"
-CSV_OUTPUT_DIR = Path(os.path.expanduser("~/.qlib/stock_data/akshare_cn"))
+CSV_OUTPUT_DIR = _PROJECT_ROOT / "data" / "stock_data" / "akshare_cn"
 CSV_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 START_DATE = "20080101"
@@ -144,7 +145,7 @@ print(f"写入 {inst_path}，共 {len(inst_lines)} 只股票")
 # ============================================================
 print("\nDump 成 Qlib bin 格式...")
 dump_cmd = (
-    f"python /data1/wjw/MT5/qlib/scripts/dump_bin.py dump_all "
+    f"python {Path(__file__).resolve().parent / 'dump_bin.py'} dump_all "
     f"--data_path {CSV_OUTPUT_DIR} "
     f"--qlib_dir {QLIB_DATA_DIR} "
     f"--freq day "

@@ -140,7 +140,7 @@ def pred_autocorr(pred: pd.Series, lag=1, inst_col="instrument", date_col="datet
     return corr_s
 
 
-def pred_autocorr_all(pred_dict, n_jobs=-1, **kwargs):
+def pred_autocorr_all(pred_dict, n_jobs=4, **kwargs):
     """
     calculate auto correlation for pred_dict
 
@@ -183,7 +183,7 @@ def calc_ic(pred: pd.Series, label: pd.Series, date_col="datetime", dropna=False
         return ic, ric
 
 
-def calc_all_ic(pred_dict_all, label, date_col="datetime", dropna=False, n_jobs=-1):
+def calc_all_ic(pred_dict_all, label, date_col="datetime", dropna=False, n_jobs=4):
     """calc_all_ic.
 
     Parameters

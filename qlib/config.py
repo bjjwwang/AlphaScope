@@ -35,6 +35,9 @@ class MLflowSettings(BaseSettings):
     default_exp_name: str = "Experiment"
 
 
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
+
 class QSettings(BaseSettings):
     """
     Qlib's settings.
@@ -49,7 +52,7 @@ class QSettings(BaseSettings):
     """
 
     mlflow: MLflowSettings = MLflowSettings()
-    provider_uri: str = "~/.qlib/qlib_data/cn_data"
+    provider_uri: str = str(_PROJECT_ROOT / "data" / "qlib_data" / "cn_data")
 
     model_config = SettingsConfigDict(
         env_prefix="QLIB_",

@@ -5,6 +5,7 @@ import os
 import sys
 import time
 import datetime
+from pathlib import Path
 import pandas as pd
 import numpy as np
 import yfinance as yf
@@ -12,8 +13,9 @@ import yfinance as yf
 # ── config ──────────────────────────────────────────────────────
 START_DATE = "2000-01-01"
 END_DATE = "2026-03-08"
-CSV_DIR = os.path.expanduser("~/.qlib/stock_data/us_yf_csv")
-QLIB_DIR = os.path.expanduser("~/.qlib/qlib_data/us_data")
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent
+CSV_DIR = str(_PROJECT_ROOT / "data" / "stock_data" / "us_yf_csv")
+QLIB_DIR = str(_PROJECT_ROOT / "data" / "qlib_data" / "us_data")
 INSTRUMENTS_DIR = os.path.join(QLIB_DIR, "instruments")
 CALENDAR_DIR = os.path.join(QLIB_DIR, "calendars")
 

@@ -98,7 +98,7 @@ class InternalData:
             key_l.append(data_key)
             ic_l.append(delayed(self._calc_perf)(pred.iloc[:, 0], label_df.iloc[:, 0]))
 
-        ic_l = Parallel(n_jobs=-1)(ic_l)
+        ic_l = Parallel(n_jobs=4)(ic_l)
         self.data_ic_df = pd.DataFrame(dict(zip(key_l, ic_l)))
         self.data_ic_df = self.data_ic_df.sort_index().sort_index(axis=1)
 

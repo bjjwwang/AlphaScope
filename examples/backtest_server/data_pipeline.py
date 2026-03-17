@@ -16,7 +16,8 @@ class InsufficientDataError(Exception):
     pass
 
 
-QLIB_US_DATA = os.path.expanduser("~/.qlib/qlib_data/us_data")
+_PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+QLIB_US_DATA = os.path.join(_PROJECT_ROOT, "data", "qlib_data", "us_data")
 DB_PATH = os.path.join(os.path.dirname(__file__), "data", "stock_data.db")
 
 
@@ -25,7 +26,7 @@ def resolve_provider_uri(data_source: str) -> str:
     if data_source in ("yfinance", "db"):
         return QLIB_US_DATA
     elif data_source == "baostock":
-        return os.path.expanduser("~/.qlib/qlib_data/cn_data")
+        return os.path.join(_PROJECT_ROOT, "data", "qlib_data", "cn_data")
     return QLIB_US_DATA
 
 
