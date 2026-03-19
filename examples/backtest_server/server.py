@@ -196,6 +196,9 @@ async def board_page():
 async def api_board(limit: int = 200):
     """Get board picks (daily top-10 AI stock picks)."""
     picks = get_board_picks(_scan_db_path, limit=limit)
+    # Strip large prediction_json from API response (not needed by frontend)
+    for p in picks:
+        p.pop("prediction_json", None)
     return {"picks": picks, "total": len(picks)}
 
 
