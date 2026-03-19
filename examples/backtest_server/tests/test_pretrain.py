@@ -221,22 +221,29 @@ def test_get_cached_prediction_case_insensitive(db):
 
 
 def test_cached_prediction_replaces_old(db):
-    """Saving for same ticker+style should replace old entry."""
+    """Saving for same ticker+style+model should replace old entry."""
     save_cached_prediction(
         db, "AAPL", "pt_1", "LGBModel", "swing", '{"signal": "buy"}',
     )
+    # Same model — should replace
     save_cached_prediction(
-        db, "AAPL", "pt_2", "GRU_ts", "swing", '{"signal": "sell"}',
+        db, "AAPL", "pt_1", "LGBModel", "swing", '{"signal": "sell"}',
     )
     cached = get_cached_prediction(db, "AAPL", "swing")
-    assert cached["model_class"] == "GRU_ts"
     pred = json.loads(cached["prediction_json"])
     assert pred["signal"] == "sell"
 
-    # Should be only one entry
+    all_cached = list_cached_predictions(db, "swing")
+    aapl_lgb = [c for c in all_cached if c["ticker"] == "AAPL" and c["model_class"] == "LGBModel"]
+    assert len(aapl_lgb) == 1
+
+    # Different model — should create separate entry
+    save_cached_prediction(
+        db, "AAPL", "pt_2", "GRU_ts", "swing", '{"signal": "buy"}',
+    )
     all_cached = list_cached_predictions(db, "swing")
     aapl_entries = [c for c in all_cached if c["ticker"] == "AAPL"]
-    assert len(aapl_entries) == 1
+    assert len(aapl_entries) == 2
 
 
 def test_list_cached_predictions(db):
