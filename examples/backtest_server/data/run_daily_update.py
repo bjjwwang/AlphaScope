@@ -3,10 +3,11 @@
 Daily data update pipeline for AlphaScout.
 
 Runs after US market close to refresh stock data, rebuild Qlib binary
-datasets, and regenerate cached predictions.
+datasets, and regenerate cached predictions for ALL tickers (parallel).
 
-Schedule (US Eastern):
-  17:30 ET — yfinance data is settled ~90 min after market close.
+Schedule:
+  08:30 AEDT (Sydney) = 21:30 UTC = 16:30 US/ET (after market close)
+  yfinance data is settled ~30 min after market close.
 
 Usage:
   # Single run (manual):
@@ -15,9 +16,8 @@ Usage:
   # Daemon mode (long-running, uses schedule library):
   python run_daily_update.py --daemon
 
-  # Recommended: crontab (17:30 ET every weekday)
-  #   If server is UTC:  30 21 * * 1-5  cd /path/to/data && python run_daily_update.py >> /tmp/alphascout_daily.log 2>&1
-  #   If server is US/ET: 30 17 * * 1-5  cd /path/to/data && python run_daily_update.py >> /tmp/alphascout_daily.log 2>&1
+  # Recommended: crontab (08:30 AEDT every weekday = Tue-Sat Sydney)
+  #   30 8 * * 2-6  cd /path/to/data && /data1/wjw/.venv/bin/python3 run_daily_update.py >> /tmp/alphascout_daily.log 2>&1
 """
 import argparse
 import os
@@ -56,21 +56,81 @@ def step_dump_qlib_data():
         print(f"  Warning: Qlib dump failed ({e}). Predictions will use stale data.")
 
 
-def step_predict_batch():
-    """Step 3: Re-generate cached predictions for top SP500 tickers."""
-    print(f"[{datetime.now():%H:%M:%S}] Step 3/3 — Regenerating cached predictions...")
-    cmd = [
-        sys.executable, "-m", "backtest_server.scheduled_scan",
-        "predict-batch", "--top", "20",
-    ]
-    result = subprocess.run(cmd, cwd=_PROJECT_DIR, capture_output=True, text=True, timeout=600)
-    if result.returncode == 0:
-        # Print last few lines
-        lines = result.stdout.strip().split("\n")
-        for line in lines[-5:]:
-            print(f"  {line}")
-    else:
-        print(f"  Warning: predict-batch failed: {result.stderr[:200]}")
+def _get_all_tickers():
+    """Read all tickers from stock_data.db."""
+    import sqlite3
+    db = os.path.join(_SCRIPT_DIR, "stock_data.db")
+    if not os.path.exists(db):
+        return []
+    conn = sqlite3.connect(db)
+    try:
+        rows = conn.execute("SELECT DISTINCT ticker FROM kline_daily_1y ORDER BY ticker").fetchall()
+        return [r[0] for r in rows]
+    finally:
+        conn.close()
+
+
+def _run_predict_parallel(tickers, style, workers=4):
+    """Run predict-batch for one style using parallel workers."""
+    import re
+
+    chunk_size = (len(tickers) + workers - 1) // workers
+    chunks = [tickers[i:i + chunk_size] for i in range(0, len(tickers), chunk_size)]
+
+    procs = []
+    for idx, chunk in enumerate(chunks):
+        ticker_str = ",".join(chunk)
+        cmd = [
+            sys.executable, "-m", "backtest_server.scheduled_scan",
+            "predict-batch", "--tickers", ticker_str, "--style", style,
+        ]
+        log_path = f"/tmp/alphascout_predict_{style}_{idx+1}.log"
+        log_file = open(log_path, "w")
+        p = subprocess.Popen(cmd, cwd=_PROJECT_DIR, stdout=log_file, stderr=subprocess.STDOUT)
+        procs.append((p, log_file, log_path, len(chunk)))
+        print(f"    Worker {idx+1}: {len(chunk)} tickers (PID {p.pid})")
+
+    total_ok = 0
+    total_fail = 0
+    for idx, (p, log_file, log_path, count) in enumerate(procs):
+        p.wait()
+        log_file.close()
+        try:
+            with open(log_path) as f:
+                lines = f.readlines()
+            for line in reversed(lines):
+                if "succeeded" in line:
+                    m = re.search(r"(\d+) succeeded.*?(\d+) failed", line)
+                    if m:
+                        total_ok += int(m.group(1))
+                        total_fail += int(m.group(2))
+                    break
+        except Exception:
+            pass
+
+    return total_ok, total_fail
+
+
+def step_predict_batch(workers=4):
+    """Step 3: Re-generate cached predictions for ALL tickers (parallel)."""
+    tickers = _get_all_tickers()
+    if not tickers:
+        print(f"[{datetime.now():%H:%M:%S}] Step 3/3 — No tickers found, skipping.")
+        return
+
+    styles = ["swing", "ultra_short"]
+    grand_ok = 0
+    grand_fail = 0
+
+    for style in styles:
+        print(f"[{datetime.now():%H:%M:%S}] Step 3 — Predicting {len(tickers)} tickers "
+              f"({style}) with {workers} workers...")
+        ok, fail = _run_predict_parallel(tickers, style, workers)
+        grand_ok += ok
+        grand_fail += fail
+        print(f"  {style}: {ok} succeeded, {fail} failed")
+
+    print(f"  Total: {grand_ok} succeeded, {grand_fail} failed")
 
 
 def run_full_pipeline():
@@ -93,15 +153,16 @@ def run_daemon():
     """Daemon mode: run daily at 17:30 (server local time)."""
     import schedule as sched
 
-    print("AlphaScout daemon started. Daily update at 17:30 (local time).")
-    print("Set your server timezone to US/Eastern, or adjust the time below.")
+    print("AlphaScout daemon started. Daily update at 08:30 AEDT (Tue-Sat).")
+    print("08:30 AEDT = 16:30 US/ET (after market close)")
     print("Press Ctrl+C to stop.\n")
 
-    sched.every().monday.at("17:30").do(run_full_pipeline)
-    sched.every().tuesday.at("17:30").do(run_full_pipeline)
-    sched.every().wednesday.at("17:30").do(run_full_pipeline)
-    sched.every().thursday.at("17:30").do(run_full_pipeline)
-    sched.every().friday.at("17:30").do(run_full_pipeline)
+    # US market closes Mon-Fri → data ready by Sydney Tue-Sat morning
+    sched.every().tuesday.at("08:30").do(run_full_pipeline)
+    sched.every().wednesday.at("08:30").do(run_full_pipeline)
+    sched.every().thursday.at("08:30").do(run_full_pipeline)
+    sched.every().friday.at("08:30").do(run_full_pipeline)
+    sched.every().saturday.at("08:30").do(run_full_pipeline)
 
     while True:
         sched.run_pending()

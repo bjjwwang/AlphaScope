@@ -269,6 +269,9 @@ class ScanRunner:
 
         # Prepare data once (reuse for all models)
         try:
+            self.emit({"event": "scan_data_prep", "data": {
+                "msg": "正在准备数据 (首次可能需要几分钟)...",
+            }})
             provider_uri = data_pipeline.resolve_provider_uri(self.data_source)
             if self.data_source == "db":
                 data_pipeline.dump_all_db_to_qlib(provider_uri=provider_uri)
@@ -277,6 +280,9 @@ class ScanRunner:
                     data_pipeline.dump_db_to_qlib(self.ticker, provider_uri)
                 else:
                     data_pipeline.download_and_dump_yfinance(self.ticker, provider_uri)
+            self.emit({"event": "scan_data_prep", "data": {
+                "msg": "数据准备完成",
+            }})
         except Exception as e:
             update_scan_job(self.db_path, self.job_id, status="failed",
                             error_msg=f"数据准备失败: {e}")
@@ -329,7 +335,7 @@ class ScanRunner:
                 }})
 
             completed_count += 1
-            pct = int(completed_count / total * 100) if total > 0 else 0
+            pct = int(completed_count / total * 100)
             self.emit({"event": "scan_progress", "data": {
                 "completed": completed_count, "total": total,
                 "current_model": mc, "pct": pct,

@@ -2321,6 +2321,12 @@ function connectScanSSE(jobId) {
     addScanLog(`扫描开始: ${d.ticker}, ${d.total_models} 个模型`);
   });
 
+  sse.addEventListener('scan_data_prep', e => {
+    const d = JSON.parse(e.data);
+    addScanLog(d.msg);
+    document.getElementById('scanProgressLabel').textContent = d.msg;
+  });
+
   sse.addEventListener('scan_model_start', e => {
     const d = JSON.parse(e.data);
     updateScanModelCard(d.model_class, 'running');
