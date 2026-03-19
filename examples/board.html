@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AlphaScout Board — AI Daily Picks</title>
+<link rel="icon" type="image/png" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📈</text></svg>">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+  :root {
+    --bg: #020617; --card: #0f172a; --card2: #1e293b; --border: #1e293b;
+    --text: #94a3b8; --dim: #64748b; --bright: #f1f5f9;
+    --accent: #34d399; --accent2: #14b8a6;
+    --green: #34d399; --red: #ef4444; --orange: #f59e0b;
+    --grad: linear-gradient(135deg, #34d399, #14b8a6);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html { scroll-behavior: smooth; }
+  body { font-family:'Inter',-apple-system,sans-serif; background:var(--bg); background-image:radial-gradient(#334155 1px,transparent 1px); background-size:30px 30px; color:var(--text); line-height:1.7; -webkit-font-smoothing:antialiased; }
+  ::selection { background:var(--accent); color:var(--bg); }
+  a { color:var(--accent); text-decoration:none; }
+
+  nav { position:fixed; top:0; width:100%; z-index:100; background:rgba(2,6,23,0.80); backdrop-filter:blur(16px); border-bottom:1px solid var(--border); padding:14px 40px; display:flex; align-items:center; justify-content:space-between; }
+  .nav-logo { font-size:22px; font-weight:800; letter-spacing:-0.5px; background:var(--grad); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+  .nav-r { display:flex; gap:28px; align-items:center; }
+  .nav-r a { color:var(--dim); font-size:13px; font-weight:500; transition:color .2s; }
+  .nav-r a:hover { color:var(--accent); }
+  .nav-cta { background:var(--accent); color:var(--bg)!important; padding:8px 20px; border-radius:100px; font-weight:700; -webkit-text-fill-color:var(--bg); transition:all .2s; }
+  .nav-cta:hover { background:#6ee7b7; }
+
+  .page { max-width:1200px; margin:0 auto; padding:100px 24px 60px; }
+
+  .page-header { margin-bottom:36px; }
+  .page-header h1 { font-size:32px; font-weight:800; color:var(--bright); margin-bottom:6px; letter-spacing:-0.5px; }
+  .page-header p { font-size:14px; color:var(--dim); }
+  .stag { display:inline-block; padding:6px 18px; border-radius:100px; border:1px solid rgba(52,211,153,0.3); background:rgba(52,211,153,0.08); font-size:11px; font-weight:700; color:var(--accent); text-transform:uppercase; letter-spacing:2px; margin-bottom:14px; }
+
+  .board-wrap { background:var(--card); border:1px solid var(--border); border-radius:24px; overflow:hidden; }
+
+  .date-header { background:rgba(52,211,153,0.06); padding:12px 20px; font-size:13px; font-weight:700; color:var(--accent); border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px; }
+  .date-header .dot { width:6px; height:6px; border-radius:50%; background:var(--accent); }
+
+  table { width:100%; border-collapse:collapse; }
+  thead th { padding:12px 14px; text-align:left; font-size:11px; font-weight:600; color:var(--dim); text-transform:uppercase; letter-spacing:0.5px; border-bottom:1px solid var(--border); background:rgba(15,23,42,0.6); position:sticky; top:56px; z-index:10; }
+  tbody td { padding:10px 14px; font-size:13px; border-bottom:1px solid rgba(30,41,59,0.4); white-space:nowrap; }
+  tbody tr:hover { background:rgba(52,211,153,0.03); }
+  tbody tr:last-child td { border:none; }
+
+  .ticker { font-weight:700; color:var(--bright); font-size:14px; }
+  .ticker a { color:var(--bright); }
+  .ticker a:hover { color:var(--accent); }
+
+  .score-badge { display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; border-radius:10px; font-size:14px; font-weight:800; }
+  .score-badge.high { background:rgba(52,211,153,0.15); color:var(--green); }
+  .score-badge.mid { background:rgba(245,158,11,0.15); color:var(--orange); }
+  .score-badge.low { background:rgba(239,68,68,0.15); color:var(--red); }
+
+  .signal-buy { color:var(--green); font-weight:600; }
+  .signal-sell { color:var(--red); font-weight:600; }
+  .signal-hold { color:var(--orange); font-weight:600; }
+
+  .ret-pos { color:var(--green); font-weight:600; }
+  .ret-neg { color:var(--red); font-weight:600; }
+  .ret-zero { color:var(--dim); }
+
+  .status-active { display:inline-block; padding:3px 10px; border-radius:100px; font-size:11px; font-weight:600; background:rgba(52,211,153,0.12); color:var(--green); }
+  .status-sold { display:inline-block; padding:3px 10px; border-radius:100px; font-size:11px; font-weight:600; background:rgba(245,158,11,0.12); color:var(--orange); }
+
+  .model-name { font-size:12px; color:var(--dim); font-family:'Fira Code',monospace; }
+  .date-cell { font-size:12px; color:var(--dim); }
+  .price-cell { font-family:'Fira Code',monospace; font-size:13px; }
+
+  .loading { text-align:center; padding:60px 20px; color:var(--dim); font-size:14px; }
+  .empty { text-align:center; padding:60px 20px; color:var(--dim); }
+  .empty h3 { color:var(--bright); font-size:18px; margin-bottom:8px; }
+
+  @media(max-width:900px) {
+    nav { padding:12px 16px; }
+    .nav-r a:not(.nav-cta) { display:none; }
+    .page { padding:80px 12px 40px; }
+    .board-wrap { border-radius:16px; overflow-x:auto; }
+    thead th, tbody td { padding:8px 10px; font-size:12px; }
+    .page-header h1 { font-size:24px; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="/" class="nav-logo">AlphaScout</a>
+  <div class="nav-r">
+    <a href="/">Home</a>
+    <a href="/board" style="color:var(--accent)">Board</a>
+    <a href="/app" class="nav-cta">Open App</a>
+  </div>
+</nav>
+
+<div class="page">
+  <div class="page-header">
+    <div class="stag">AI Daily Picks</div>
+    <h1>Stock Leaderboard</h1>
+    <p>Top 10 stocks selected daily by AI models. Updated after US market close.</p>
+  </div>
+
+  <div class="board-wrap" id="boardWrap">
+    <div class="loading" id="loadingMsg">Loading board data...</div>
+  </div>
+</div>
+
+<script>
+const MODEL_NAMES = {
+  LGBModel:'LightGBM', XGBModel:'XGBoost', CatBoostModel:'CatBoost',
+  LinearModel:'Linear', DEnsembleModel:'Ensemble',
+  LSTM_flat:'LSTM', GRU_flat:'GRU', ALSTM_flat:'ALSTM',
+  LSTM_ts:'LSTM-TS', GRU_ts:'GRU-TS', ALSTM_ts:'ALSTM-TS',
+  ADARNN:'ADARNN', Transformer_flat:'Transformer', GATs_flat:'GATs',
+  Transformer_ts:'Transformer-TS', LocalFormer_ts:'LocalFormer',
+  GATs_ts:'GATs-TS', TCN_flat:'TCN', TabnetModel:'TabNet',
+  SFM:'SFM', DNNModelPytorch:'DNN', TCN_ts:'TCN-TS',
+};
+
+function fmtRet(val) {
+  if (val == null) return '<span class="ret-zero">—</span>';
+  const cls = val > 0 ? 'ret-pos' : val < 0 ? 'ret-neg' : 'ret-zero';
+  const sign = val > 0 ? '+' : '';
+  return `<span class="${cls}">${sign}${val.toFixed(2)}%</span>`;
+}
+
+function fmtPrice(val) {
+  if (val == null) return '—';
+  return '$' + val.toFixed(2);
+}
+
+function fmtDate(d) {
+  if (!d) return '—';
+  return d;
+}
+
+function scoreBadge(score) {
+  const cls = score >= 8 ? 'high' : score >= 5 ? 'mid' : 'low';
+  return `<span class="score-badge ${cls}">${score}</span>`;
+}
+
+function signalLabel(sig) {
+  if (sig === 'buy') return '<span class="signal-buy">Buy</span>';
+  if (sig === 'sell') return '<span class="signal-sell">Sell</span>';
+  return '<span class="signal-hold">Hold</span>';
+}
+
+function statusBadge(pick) {
+  if (pick.sell_date) return '<span class="status-sold">Sold</span>';
+  return '<span class="status-active">Active</span>';
+}
+
+async function loadBoard() {
+  const wrap = document.getElementById('boardWrap');
+  try {
+    const resp = await fetch('/api/board?limit=200');
+    if (!resp.ok) throw new Error('API error');
+    const data = await resp.json();
+    const picks = data.picks || [];
+
+    if (picks.length === 0) {
+      wrap.innerHTML = `
+        <div class="empty">
+          <h3>No picks yet</h3>
+          <p>The board will be populated after the daily prediction run completes.</p>
+        </div>`;
+      return;
+    }
+
+    // Group by pick_date
+    const groups = {};
+    for (const p of picks) {
+      if (!groups[p.pick_date]) groups[p.pick_date] = [];
+      groups[p.pick_date].push(p);
+    }
+
+    // Sort dates descending
+    const dates = Object.keys(groups).sort((a, b) => b.localeCompare(a));
+
+    let html = '';
+    for (const d of dates) {
+      const isToday = d === new Date().toISOString().slice(0, 10);
+      const label = isToday ? `${d} — Today's Picks` : d;
+      html += `<div class="date-header"><div class="dot"></div>${label}</div>`;
+      html += `<table>
+        <thead><tr>
+          <th>#</th><th>Ticker</th><th>Score</th><th>Signal</th>
+          <th>Model</th><th>Rec. Date</th><th>Rec. Price</th>
+          <th>Sell Date</th><th>Sell Price</th><th>Sell Return</th>
+          <th>Latest Price</th><th>Return</th><th>Status</th>
+        </tr></thead><tbody>`;
+
+      const rows = groups[d];
+      rows.forEach((p, i) => {
+        const modelName = MODEL_NAMES[p.model_class] || p.model_class;
+        html += `<tr>
+          <td style="color:var(--dim)">${i + 1}</td>
+          <td class="ticker"><a href="/app?ticker=${encodeURIComponent(p.ticker)}">${p.ticker}</a></td>
+          <td>${scoreBadge(p.alpha_score)}</td>
+          <td>${signalLabel(p.signal)}</td>
+          <td class="model-name">${modelName}</td>
+          <td class="date-cell">${fmtDate(p.recommended_date || p.pick_date)}</td>
+          <td class="price-cell">${fmtPrice(p.recommended_price)}</td>
+          <td class="date-cell">${fmtDate(p.sell_date)}</td>
+          <td class="price-cell">${fmtPrice(p.sell_price)}</td>
+          <td>${fmtRet(p.sell_return_pct)}</td>
+          <td class="price-cell">${fmtPrice(p.latest_price)} <span class="date-cell">(${fmtDate(p.latest_price_date)})</span></td>
+          <td>${fmtRet(p.today_return_pct)}</td>
+          <td>${statusBadge(p)}</td>
+        </tr>`;
+      });
+
+      html += '</tbody></table>';
+    }
+
+    wrap.innerHTML = html;
+  } catch (e) {
+    wrap.innerHTML = `<div class="empty"><h3>Failed to load</h3><p>${e.message}</p></div>`;
+  }
+}
+
+loadBoard();
+// Auto-refresh every 5 minutes
+setInterval(loadBoard, 300000);
+</script>
+
+</body>
+</html>

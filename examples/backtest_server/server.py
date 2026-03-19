@@ -18,6 +18,7 @@ from backtest_server.scan_db import (
     init_db, create_scan_job, get_scan_job, update_scan_job,
     list_scan_jobs, get_model_results, get_latest_completed_scan,
     get_cached_prediction, list_pretrained_models, list_cached_predictions,
+    get_board_picks,
 )
 from backtest_server.scanner import ScanRunner
 
@@ -125,6 +126,7 @@ _slides_file = os.path.join(os.path.dirname(__file__), "..", "pitch_slides.html"
 _landing_cn_file = os.path.join(os.path.dirname(__file__), "..", "landing_cn.html")
 _slides_cn_file = os.path.join(os.path.dirname(__file__), "..", "pitch_slides_cn.html")
 _demo_video = os.path.join(os.path.dirname(__file__), "..", "Demo.mp4")
+_board_file = os.path.join(os.path.dirname(__file__), "..", "board.html")
 
 
 @app.get("/")
@@ -181,6 +183,20 @@ async def demo_video():
     if os.path.exists(_demo_video):
         return FileResponse(_demo_video, media_type="video/mp4")
     return {"error": "Demo video not found"}
+
+
+@app.get("/board")
+async def board_page():
+    if os.path.exists(_board_file):
+        return FileResponse(_board_file, media_type="text/html")
+    return {"error": "Board page not found"}
+
+
+@app.get("/api/board")
+async def api_board(limit: int = 200):
+    """Get board picks (daily top-10 AI stock picks)."""
+    picks = get_board_picks(_scan_db_path, limit=limit)
+    return {"picks": picks, "total": len(picks)}
 
 
 def compute_alpha_score(model_results: list[dict]) -> dict:

@@ -77,6 +77,29 @@ def init_db(db_path: str):
 
         CREATE INDEX IF NOT EXISTS idx_cached_ticker
             ON cached_predictions(ticker, trading_style);
+
+        CREATE TABLE IF NOT EXISTS board_picks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            pick_date TEXT NOT NULL,
+            ticker TEXT NOT NULL,
+            trading_style TEXT NOT NULL,
+            model_class TEXT NOT NULL,
+            alpha_score INTEGER NOT NULL,
+            signal TEXT NOT NULL,
+            recommended_date TEXT NOT NULL,
+            recommended_price REAL NOT NULL,
+            sell_date TEXT,
+            sell_price REAL,
+            sell_return_pct REAL,
+            latest_price REAL,
+            latest_price_date TEXT,
+            today_return_pct REAL,
+            prediction_json TEXT,
+            UNIQUE(pick_date, ticker, trading_style)
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_board_date
+            ON board_picks(pick_date DESC);
     """)
     conn.close()
 
@@ -363,5 +386,66 @@ def clear_cached_predictions(db_path: str, trading_style: str | None = None):
         )
     else:
         conn.execute("DELETE FROM cached_predictions")
+    conn.commit()
+    conn.close()
+
+
+# =============================================
+# Board picks (daily top-10 leaderboard)
+# =============================================
+
+def save_board_pick(db_path: str, **fields) -> int:
+    """Insert or replace a board pick. Returns row id."""
+    conn = sqlite3.connect(db_path)
+    cur = conn.execute(
+        """INSERT OR REPLACE INTO board_picks
+           (pick_date, ticker, trading_style, model_class, alpha_score, signal,
+            recommended_date, recommended_price, sell_date, sell_price, sell_return_pct,
+            latest_price, latest_price_date, today_return_pct, prediction_json)
+           VALUES (:pick_date, :ticker, :trading_style, :model_class, :alpha_score,
+                   :signal, :recommended_date, :recommended_price, :sell_date, :sell_price,
+                   :sell_return_pct, :latest_price, :latest_price_date,
+                   :today_return_pct, :prediction_json)""",
+        fields,
+    )
+    conn.commit()
+    row_id = cur.lastrowid
+    conn.close()
+    return row_id
+
+
+def get_board_picks(db_path: str, limit: int = 200) -> list[dict]:
+    """Get board picks ordered by pick_date DESC, alpha_score DESC."""
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    rows = conn.execute(
+        """SELECT * FROM board_picks
+           ORDER BY pick_date DESC, alpha_score DESC, today_return_pct DESC
+           LIMIT ?""",
+        (limit,),
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def get_active_board_picks(db_path: str) -> list[dict]:
+    """Get board picks that haven't been sold yet (sell_date IS NULL)."""
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    rows = conn.execute(
+        "SELECT * FROM board_picks WHERE sell_date IS NULL ORDER BY pick_date DESC"
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def update_board_pick(db_path: str, pick_id: int, **fields):
+    """Update fields on a board pick by id."""
+    if not fields:
+        return
+    set_clause = ", ".join(f"{k} = ?" for k in fields)
+    values = list(fields.values()) + [pick_id]
+    conn = sqlite3.connect(db_path)
+    conn.execute(f"UPDATE board_picks SET {set_clause} WHERE id = ?", values)
     conn.commit()
     conn.close()

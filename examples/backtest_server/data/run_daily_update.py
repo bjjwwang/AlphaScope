@@ -133,6 +133,17 @@ def step_predict_batch(workers=4):
     print(f"  Total: {grand_ok} succeeded, {grand_fail} failed")
 
 
+def step_generate_board():
+    """Step 4: Generate daily board picks from cached predictions."""
+    print(f"[{datetime.now():%H:%M:%S}] Step 4/4 — Generating board picks...")
+    try:
+        sys.path.insert(0, os.path.join(_SCRIPT_DIR, ".."))
+        from backtest_server.board_generator import generate_daily_picks
+        generate_daily_picks()
+    except Exception as e:
+        print(f"  Warning: Board generation failed: {e}")
+
+
 def run_full_pipeline():
     """Run the complete daily update pipeline."""
     start = time.time()
@@ -143,6 +154,7 @@ def run_full_pipeline():
     step_update_stock_data()
     step_dump_qlib_data()
     step_predict_batch()
+    step_generate_board()
 
     elapsed = time.time() - start
     print(f"\n[{datetime.now():%H:%M:%S}] Pipeline complete in {elapsed:.0f}s")
@@ -194,6 +206,7 @@ def main():
         step_dump_qlib_data()
         if not args.skip_predict:
             step_predict_batch()
+        step_generate_board()
 
         elapsed = time.time() - start
         print(f"\n[{datetime.now():%H:%M:%S}] Pipeline complete in {elapsed:.0f}s")
