@@ -192,10 +192,18 @@ async def board_page():
     return {"error": "Board page not found"}
 
 
+@app.get("/board/gpu")
+async def board_gpu_page():
+    gpu_board = os.path.join(os.path.dirname(__file__), "..", "board_gpu.html")
+    if os.path.exists(gpu_board):
+        return FileResponse(gpu_board, media_type="text/html")
+    return {"error": "GPU Board page not found"}
+
+
 @app.get("/api/board")
-async def api_board(limit: int = 200):
+async def api_board(limit: int = 200, board_type: str = "cpu"):
     """Get board picks (daily top-10 AI stock picks)."""
-    picks = get_board_picks(_scan_db_path, limit=limit)
+    picks = get_board_picks(_scan_db_path, limit=limit, board_type=board_type)
     # Strip large prediction_json from API response (not needed by frontend)
     for p in picks:
         p.pop("prediction_json", None)

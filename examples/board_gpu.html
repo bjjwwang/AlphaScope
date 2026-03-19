@@ -3,17 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AlphaScout Board — AI Daily Picks</title>
-<link rel="icon" type="image/png" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📈</text></svg>">
+<title>AlphaScout GPU Board — Deep Learning Picks</title>
+<link rel="icon" type="image/png" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧠</text></svg>">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 
   :root {
     --bg: #020617; --card: #0f172a; --card2: #1e293b; --border: #1e293b;
     --text: #94a3b8; --dim: #64748b; --bright: #f1f5f9;
-    --accent: #34d399; --accent2: #14b8a6;
+    --accent: #a78bfa; --accent2: #8b5cf6;
     --green: #34d399; --red: #ef4444; --orange: #f59e0b;
-    --grad: linear-gradient(135deg, #34d399, #14b8a6);
+    --grad: linear-gradient(135deg, #a78bfa, #8b5cf6);
   }
   * { margin:0; padding:0; box-sizing:border-box; }
   html { scroll-behavior: smooth; }
@@ -27,24 +27,24 @@
   .nav-r a { color:var(--dim); font-size:13px; font-weight:500; transition:color .2s; }
   .nav-r a:hover { color:var(--accent); }
   .nav-cta { background:var(--accent); color:var(--bg)!important; padding:8px 20px; border-radius:100px; font-weight:700; -webkit-text-fill-color:var(--bg); transition:all .2s; }
-  .nav-cta:hover { background:#6ee7b7; }
+  .nav-cta:hover { background:#c4b5fd; }
 
   .page { max-width:1200px; margin:0 auto; padding:100px 24px 60px; }
 
   .page-header { margin-bottom:36px; }
   .page-header h1 { font-size:32px; font-weight:800; color:var(--bright); margin-bottom:6px; letter-spacing:-0.5px; }
   .page-header p { font-size:14px; color:var(--dim); }
-  .stag { display:inline-block; padding:6px 18px; border-radius:100px; border:1px solid rgba(52,211,153,0.3); background:rgba(52,211,153,0.08); font-size:11px; font-weight:700; color:var(--accent); text-transform:uppercase; letter-spacing:2px; margin-bottom:14px; }
+  .stag { display:inline-block; padding:6px 18px; border-radius:100px; border:1px solid rgba(167,139,250,0.3); background:rgba(167,139,250,0.08); font-size:11px; font-weight:700; color:var(--accent); text-transform:uppercase; letter-spacing:2px; margin-bottom:14px; }
 
   .board-wrap { background:var(--card); border:1px solid var(--border); border-radius:24px; overflow:hidden; }
 
-  .date-header { background:rgba(52,211,153,0.06); padding:12px 20px; font-size:13px; font-weight:700; color:var(--accent); border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px; }
+  .date-header { background:rgba(167,139,250,0.06); padding:12px 20px; font-size:13px; font-weight:700; color:var(--accent); border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px; }
   .date-header .dot { width:6px; height:6px; border-radius:50%; background:var(--accent); }
 
   table { width:100%; border-collapse:collapse; }
   thead th { padding:12px 14px; text-align:left; font-size:11px; font-weight:600; color:var(--dim); text-transform:uppercase; letter-spacing:0.5px; border-bottom:1px solid var(--border); background:rgba(15,23,42,0.6); position:sticky; top:56px; z-index:10; }
   tbody td { padding:10px 14px; font-size:13px; border-bottom:1px solid rgba(30,41,59,0.4); white-space:nowrap; }
-  tbody tr:hover { background:rgba(52,211,153,0.03); }
+  tbody tr:hover { background:rgba(167,139,250,0.03); }
   tbody tr:last-child td { border:none; }
 
   .ticker { font-weight:700; color:var(--bright); font-size:14px; }
@@ -52,7 +52,7 @@
   .ticker a:hover { color:var(--accent); }
 
   .score-badge { display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; border-radius:10px; font-size:14px; font-weight:800; }
-  .score-badge.high { background:rgba(52,211,153,0.15); color:var(--green); }
+  .score-badge.high { background:rgba(167,139,250,0.15); color:var(--accent); }
   .score-badge.mid { background:rgba(245,158,11,0.15); color:var(--orange); }
   .score-badge.low { background:rgba(239,68,68,0.15); color:var(--red); }
 
@@ -64,7 +64,7 @@
   .ret-neg { color:var(--red); font-weight:600; }
   .ret-zero { color:var(--dim); }
 
-  .status-active { display:inline-block; padding:3px 10px; border-radius:100px; font-size:11px; font-weight:600; background:rgba(52,211,153,0.12); color:var(--green); }
+  .status-active { display:inline-block; padding:3px 10px; border-radius:100px; font-size:11px; font-weight:600; background:rgba(167,139,250,0.12); color:var(--accent); }
   .status-sold { display:inline-block; padding:3px 10px; border-radius:100px; font-size:11px; font-weight:600; background:rgba(245,158,11,0.12); color:var(--orange); }
 
   .model-name { font-size:12px; color:var(--dim); font-family:'Fira Code',monospace; }
@@ -91,25 +91,25 @@
   <a href="/" class="nav-logo">AlphaScout</a>
   <div class="nav-r">
     <a href="/">Home</a>
-    <a href="/board" style="color:var(--accent)">Board</a>
+    <a href="/board">Board</a>
     <a href="/app" class="nav-cta">Open App</a>
   </div>
 </nav>
 
 <div class="page">
   <div class="page-header">
-    <div class="stag">AI Daily Picks</div>
-    <h1>Stock Leaderboard — CPU Models</h1>
-    <p>Top 10 stocks selected daily by tree-based models (LightGBM, XGBoost, CatBoost) across 5,000+ tickers.<br>
-       Models that agree on "buy" are ranked higher (multi-model consensus).</p>
+    <div class="stag">Deep Learning Picks</div>
+    <h1>GPU Model Leaderboard</h1>
+    <p>Top 10 stocks selected daily by 5 neural network models (GRU, LSTM, ALSTM, Transformer, LocalFormer) on top-100 large caps.<br>
+       Stocks with more models agreeing on "buy" rank higher (consensus voting).</p>
     <div style="margin-top:14px;display:flex;gap:10px">
-      <a href="/board" style="padding:8px 20px;border-radius:100px;font-size:13px;font-weight:700;background:var(--accent);color:var(--bg);">CPU Board</a>
-      <a href="/board/gpu" style="padding:8px 20px;border-radius:100px;font-size:13px;font-weight:700;border:1px solid var(--border);color:var(--text);">GPU Board</a>
+      <a href="/board" style="padding:8px 20px;border-radius:100px;font-size:13px;font-weight:700;border:1px solid var(--border);color:var(--text);">CPU Board</a>
+      <a href="/board/gpu" style="padding:8px 20px;border-radius:100px;font-size:13px;font-weight:700;background:var(--accent);color:var(--bg);">GPU Board</a>
     </div>
   </div>
 
   <div class="board-wrap" id="boardWrap">
-    <div class="loading" id="loadingMsg">Loading board data...</div>
+    <div class="loading" id="loadingMsg">Loading GPU board data...</div>
   </div>
 </div>
 
@@ -126,19 +126,19 @@ const MODEL_NAMES = {
 };
 
 function fmtRet(val) {
-  if (val == null) return '<span class="ret-zero">—</span>';
+  if (val == null) return '<span class="ret-zero">\u2014</span>';
   const cls = val > 0 ? 'ret-pos' : val < 0 ? 'ret-neg' : 'ret-zero';
   const sign = val > 0 ? '+' : '';
   return `<span class="${cls}">${sign}${val.toFixed(2)}%</span>`;
 }
 
 function fmtPrice(val) {
-  if (val == null) return '—';
+  if (val == null) return '\u2014';
   return '$' + val.toFixed(2);
 }
 
 function fmtDate(d) {
-  if (!d) return '—';
+  if (!d) return '\u2014';
   return d;
 }
 
@@ -161,7 +161,7 @@ function statusBadge(pick) {
 async function loadBoard() {
   const wrap = document.getElementById('boardWrap');
   try {
-    const resp = await fetch('/api/board?limit=200&board_type=cpu');
+    const resp = await fetch('/api/board?limit=200&board_type=gpu');
     if (!resp.ok) throw new Error('API error');
     const data = await resp.json();
     const picks = data.picks || [];
@@ -169,26 +169,24 @@ async function loadBoard() {
     if (picks.length === 0) {
       wrap.innerHTML = `
         <div class="empty">
-          <h3>No picks yet</h3>
-          <p>The board will be populated after the daily prediction run completes.</p>
+          <h3>No GPU picks yet</h3>
+          <p>GPU models are being trained. The board will be populated after the daily prediction run completes.</p>
         </div>`;
       return;
     }
 
-    // Group by pick_date
     const groups = {};
     for (const p of picks) {
       if (!groups[p.pick_date]) groups[p.pick_date] = [];
       groups[p.pick_date].push(p);
     }
 
-    // Sort dates descending
     const dates = Object.keys(groups).sort((a, b) => b.localeCompare(a));
 
     let html = '';
     for (const d of dates) {
       const isToday = d === new Date().toISOString().slice(0, 10);
-      const label = isToday ? `${d} — Today's Picks` : d;
+      const label = isToday ? `${d} \u2014 Today's Picks` : d;
       html += `<div class="date-header"><div class="dot"></div>${label}</div>`;
       html += `<table>
         <thead><tr>
@@ -202,11 +200,11 @@ async function loadBoard() {
       rows.forEach((p, i) => {
         const models = (p.model_class || '').split(',').map(m => MODEL_NAMES[m] || m).join(', ');
         const cons = p.model_consensus || 0;
-        const consClass = cons >= 3 ? 'high' : cons >= 2 ? 'mid' : 'low';
+        const consClass = cons >= 4 ? 'high' : cons >= 3 ? 'mid' : 'low';
         html += `<tr>
           <td style="color:var(--dim)">${i + 1}</td>
           <td class="ticker"><a href="/app?ticker=${encodeURIComponent(p.ticker)}">${p.ticker}</a></td>
-          <td><span class="score-badge ${consClass}">${cons}</span></td>
+          <td><span class="score-badge ${consClass}">${cons}/5</span></td>
           <td>${scoreBadge(p.alpha_score)}</td>
           <td>${signalLabel(p.signal)}</td>
           <td class="model-name">${models}</td>
@@ -231,7 +229,6 @@ async function loadBoard() {
 }
 
 loadBoard();
-// Auto-refresh every 5 minutes
 setInterval(loadBoard, 300000);
 </script>
 

@@ -270,7 +270,7 @@ class PretrainRunner:
             self.emit({"event": "pretrain_progress", "data": {
                 "completed": completed, "total": total,
                 "succeeded": succeeded, "failed": failed,
-                "pct": int(completed / total * 100) if total > 0 else 0,
+                "pct": int(completed / total * 100),
             }})
 
             # Free memory between models
@@ -365,7 +365,11 @@ def quick_predict(
     # Predict
     import pandas as pd
     emit({"event": "quick_predict_progress", "data": {"msg": "Generating predictions..."}})
-    pred = trained_model.predict(dataset, segment=(pred_start.isoformat(), today.isoformat()))
+    try:
+        pred = trained_model.predict(dataset, segment=(pred_start.isoformat(), today.isoformat()))
+    except TypeError:
+        # Some models (TS models) don't accept segment kwarg
+        pred = trained_model.predict(dataset)
 
     if isinstance(pred, pd.Series):
         pred = pred.to_frame("score")

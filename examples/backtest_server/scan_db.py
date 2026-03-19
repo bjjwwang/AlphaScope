@@ -95,11 +95,15 @@ def init_db(db_path: str):
             latest_price_date TEXT,
             today_return_pct REAL,
             prediction_json TEXT,
-            UNIQUE(pick_date, ticker, trading_style)
+            board_type TEXT NOT NULL DEFAULT 'cpu',
+            model_consensus INTEGER DEFAULT 0,
+            UNIQUE(pick_date, ticker, trading_style, board_type)
         );
 
         CREATE INDEX IF NOT EXISTS idx_board_date
             ON board_picks(pick_date DESC);
+        CREATE INDEX IF NOT EXISTS idx_board_type
+            ON board_picks(board_type, pick_date DESC);
     """)
     conn.close()
 
@@ -327,10 +331,10 @@ def save_cached_prediction(
     """Save a cached prediction. Returns the row id."""
     now = _now()
     conn = sqlite3.connect(db_path)
-    # Remove old prediction for same ticker + trading_style
+    # Remove old prediction for same ticker + trading_style + model_class
     conn.execute(
-        "DELETE FROM cached_predictions WHERE ticker = ? AND trading_style = ?",
-        (ticker.upper(), trading_style),
+        "DELETE FROM cached_predictions WHERE ticker = ? AND trading_style = ? AND model_class = ?",
+        (ticker.upper(), trading_style, model_class),
     )
     cur = conn.execute(
         """INSERT INTO cached_predictions
@@ -396,16 +400,19 @@ def clear_cached_predictions(db_path: str, trading_style: str | None = None):
 
 def save_board_pick(db_path: str, **fields) -> int:
     """Insert or replace a board pick. Returns row id."""
+    fields.setdefault("board_type", "cpu")
+    fields.setdefault("model_consensus", 0)
     conn = sqlite3.connect(db_path)
     cur = conn.execute(
         """INSERT OR REPLACE INTO board_picks
            (pick_date, ticker, trading_style, model_class, alpha_score, signal,
             recommended_date, recommended_price, sell_date, sell_price, sell_return_pct,
-            latest_price, latest_price_date, today_return_pct, prediction_json)
+            latest_price, latest_price_date, today_return_pct, prediction_json,
+            board_type, model_consensus)
            VALUES (:pick_date, :ticker, :trading_style, :model_class, :alpha_score,
                    :signal, :recommended_date, :recommended_price, :sell_date, :sell_price,
                    :sell_return_pct, :latest_price, :latest_price_date,
-                   :today_return_pct, :prediction_json)""",
+                   :today_return_pct, :prediction_json, :board_type, :model_consensus)""",
         fields,
     )
     conn.commit()
@@ -414,27 +421,41 @@ def save_board_pick(db_path: str, **fields) -> int:
     return row_id
 
 
-def get_board_picks(db_path: str, limit: int = 200) -> list[dict]:
+def get_board_picks(db_path: str, limit: int = 200, board_type: str | None = None) -> list[dict]:
     """Get board picks ordered by pick_date DESC, alpha_score DESC."""
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
-    rows = conn.execute(
-        """SELECT * FROM board_picks
-           ORDER BY pick_date DESC, alpha_score DESC, today_return_pct DESC
-           LIMIT ?""",
-        (limit,),
-    ).fetchall()
+    if board_type:
+        rows = conn.execute(
+            """SELECT * FROM board_picks WHERE board_type = ?
+               ORDER BY pick_date DESC, model_consensus DESC, alpha_score DESC, today_return_pct DESC
+               LIMIT ?""",
+            (board_type, limit),
+        ).fetchall()
+    else:
+        rows = conn.execute(
+            """SELECT * FROM board_picks
+               ORDER BY pick_date DESC, model_consensus DESC, alpha_score DESC, today_return_pct DESC
+               LIMIT ?""",
+            (limit,),
+        ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
 
 
-def get_active_board_picks(db_path: str) -> list[dict]:
+def get_active_board_picks(db_path: str, board_type: str | None = None) -> list[dict]:
     """Get board picks that haven't been sold yet (sell_date IS NULL)."""
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
-    rows = conn.execute(
-        "SELECT * FROM board_picks WHERE sell_date IS NULL ORDER BY pick_date DESC"
-    ).fetchall()
+    if board_type:
+        rows = conn.execute(
+            "SELECT * FROM board_picks WHERE sell_date IS NULL AND board_type = ? ORDER BY pick_date DESC",
+            (board_type,),
+        ).fetchall()
+    else:
+        rows = conn.execute(
+            "SELECT * FROM board_picks WHERE sell_date IS NULL ORDER BY pick_date DESC"
+        ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
 

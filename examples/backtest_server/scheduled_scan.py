@@ -85,7 +85,14 @@ def cmd_pretrain(args):
     os.makedirs(os.path.dirname(_db_path), exist_ok=True)
     init_db(_db_path)
 
-    models = QUICK_SCAN_MODELS if args.quick else None
+    GPU_MODELS = ["GRU_ts", "LSTM_ts", "ALSTM_ts", "Transformer_ts",
+                  "GATs_ts", "LocalFormer_ts", "TCN_ts"]
+    if args.quick:
+        models = QUICK_SCAN_MODELS
+    elif args.quick_gpu:
+        models = GPU_MODELS
+    else:
+        models = None
     styles = [args.style] if args.style else None
 
     if args.force:
@@ -124,6 +131,11 @@ def cmd_predict_batch(args):
 
     styles = [args.style] if args.style else list(TRADING_STYLE_PRESETS.keys())
 
+    # Determine which models to use
+    model_filter = None
+    if args.model:
+        model_filter = [m.strip() for m in args.model.split(",")]
+
     # Find all available pretrained models
     pt_models = list_pretrained_models(_db_path, status="completed")
     if not pt_models:
@@ -137,53 +149,53 @@ def cmd_predict_batch(args):
         if key not in pt_by_config:
             pt_by_config[key] = pt
 
-    total = len(tickers) * len(styles)
-    done = 0
     succeeded = 0
     failed = 0
 
     for style in styles:
-        # Find the best pretrained model for this style (prefer LGBModel as it's fastest)
-        best_pt = None
-        for mc in QUICK_SCAN_MODELS:
-            key = (mc, style)
-            if key in pt_by_config:
-                best_pt = pt_by_config[key]
-                break
+        # Collect models to run for this style
+        if model_filter:
+            models_to_run = []
+            for mc in model_filter:
+                key = (mc, style)
+                if key in pt_by_config:
+                    models_to_run.append((mc, pt_by_config[key]))
+                else:
+                    print(f"No pretrained {mc} for style={style}, skipping")
+        else:
+            # Default: use all pretrained models for this style
+            models_to_run = [
+                (mc, pt) for (mc, st), pt in pt_by_config.items() if st == style
+            ]
 
-        if best_pt is None:
-            # Try any available model
-            for key, pt in pt_by_config.items():
-                if key[1] == style:
-                    best_pt = pt
-                    break
-
-        if best_pt is None:
-            print(f"No pretrained model available for style={style}, skipping")
-            done += len(tickers)
+        if not models_to_run:
+            print(f"No pretrained models available for style={style}, skipping")
             continue
 
-        mc = best_pt["model_class"]
-        print(f"\nPredicting {len(tickers)} tickers with {mc} / {style}...")
+        total = len(tickers) * len(models_to_run)
+        done = 0
 
-        for ticker in tickers:
-            done += 1
-            try:
-                result = quick_predict(
-                    ticker, mc, style, _db_path,
-                    lookback_days=args.lookback,
-                )
-                save_cached_prediction(
-                    _db_path, ticker, best_pt["id"], mc, style,
-                    json.dumps(result),
-                )
-                sig = result.get("latest_signal", "?")
-                score = result.get("latest_score", 0)
-                print(f"  [{done}/{total}] {ticker}: {sig} (score={score:.4f})")
-                succeeded += 1
-            except Exception as e:
-                print(f"  [{done}/{total}] {ticker}: FAILED — {str(e)[:80]}")
-                failed += 1
+        for mc, pt_model in models_to_run:
+            print(f"\nPredicting {len(tickers)} tickers with {mc} / {style}...")
+
+            for ticker in tickers:
+                done += 1
+                try:
+                    result = quick_predict(
+                        ticker, mc, style, _db_path,
+                        lookback_days=args.lookback,
+                    )
+                    save_cached_prediction(
+                        _db_path, ticker, pt_model["id"], mc, style,
+                        json.dumps(result),
+                    )
+                    sig = result.get("latest_signal", "?")
+                    score = result.get("latest_score", 0)
+                    print(f"  [{done}/{total}] {ticker}/{mc}: {sig} (score={score:.4f})")
+                    succeeded += 1
+                except Exception as e:
+                    print(f"  [{done}/{total}] {ticker}/{mc}: FAILED — {str(e)[:80]}")
+                    failed += 1
 
     print(f"\nBatch prediction complete: {succeeded} succeeded, {failed} failed")
 
@@ -227,7 +239,9 @@ def main():
     # pretrain
     p_train = subparsers.add_parser("pretrain", help="Pre-train models")
     p_train.add_argument("--quick", action="store_true",
-                         help="Only train top 5 quick-scan models")
+                         help="Only train top 5 quick-scan models (CPU)")
+    p_train.add_argument("--quick-gpu", action="store_true",
+                         help="Only train GPU/PyTorch models (7 models)")
     p_train.add_argument("--force", action="store_true",
                          help="Delete old models and re-train from scratch")
     p_train.add_argument("--style", choices=list(TRADING_STYLE_PRESETS.keys()),
@@ -242,6 +256,7 @@ def main():
     p_pred.add_argument("--top", type=int, help="Use top N SP500 tickers")
     p_pred.add_argument("--style", choices=list(TRADING_STYLE_PRESETS.keys()),
                          help="Only predict for one trading style")
+    p_pred.add_argument("--model", help="Comma-separated model classes (default: all pretrained)")
     p_pred.add_argument("--lookback", type=int, default=60,
                          help="Lookback days for prediction (default: 60)")
 

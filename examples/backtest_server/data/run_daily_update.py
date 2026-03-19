@@ -33,7 +33,7 @@ _PROJECT_DIR = os.path.join(_SCRIPT_DIR, "..", "..")  # examples/
 
 def step_update_stock_data():
     """Step 1: Fetch latest prices from yfinance into stock_data.db."""
-    print(f"[{datetime.now():%H:%M:%S}] Step 1/3 — Updating stock data from yfinance...")
+    print(f"[{datetime.now():%H:%M:%S}] Step 1 — Updating stock data from yfinance...")
     sys.path.insert(0, _SCRIPT_DIR)
     from stock_data_manager import StockDataManager
 
@@ -45,7 +45,7 @@ def step_update_stock_data():
 
 def step_dump_qlib_data():
     """Step 2: Convert stock_data.db → Qlib binary format."""
-    print(f"[{datetime.now():%H:%M:%S}] Step 2/3 — Dumping to Qlib binary format...")
+    print(f"[{datetime.now():%H:%M:%S}] Step 2 — Dumping to Qlib binary format...")
     try:
         # data_pipeline.dump_db_to_qlib() handles this
         sys.path.insert(0, os.path.join(_SCRIPT_DIR, ".."))
@@ -70,21 +70,29 @@ def _get_all_tickers():
         conn.close()
 
 
-def _run_predict_parallel(tickers, style, workers=4):
-    """Run predict-batch for one style using parallel workers."""
+def _run_predict_parallel(tickers, style, workers=4, model=None):
+    """Run predict-batch for one style using parallel workers.
+
+    Args:
+        model: optional comma-separated model class string (e.g. "LGBModel,XGBModel")
+               If None, uses all pretrained models.
+    """
     import re
 
     chunk_size = (len(tickers) + workers - 1) // workers
     chunks = [tickers[i:i + chunk_size] for i in range(0, len(tickers), chunk_size)]
 
     procs = []
+    tag = f"{style}_{model.replace(',', '_') if model else 'all'}"
     for idx, chunk in enumerate(chunks):
         ticker_str = ",".join(chunk)
         cmd = [
             sys.executable, "-m", "backtest_server.scheduled_scan",
             "predict-batch", "--tickers", ticker_str, "--style", style,
         ]
-        log_path = f"/tmp/alphascout_predict_{style}_{idx+1}.log"
+        if model:
+            cmd.extend(["--model", model])
+        log_path = f"/tmp/alphascout_predict_{tag}_{idx+1}.log"
         log_file = open(log_path, "w")
         p = subprocess.Popen(cmd, cwd=_PROJECT_DIR, stdout=log_file, stderr=subprocess.STDOUT)
         procs.append((p, log_file, log_path, len(chunk)))
@@ -111,37 +119,117 @@ def _run_predict_parallel(tickers, style, workers=4):
     return total_ok, total_fail
 
 
+# CPU models can run in parallel (no GPU contention)
+CPU_MODELS = ["LGBModel", "XGBModel", "CatBoostModel"]
+# GPU models must run serially (share one GPU)
+# Note: GATs_ts and TCN_ts excluded — fail during pretrain
+GPU_MODELS = ["GRU_ts", "LSTM_ts", "ALSTM_ts", "Transformer_ts", "LocalFormer_ts"]
+
+# Top 100 stocks for GPU model prediction (SP500 large+mid cap, diverse sectors)
+GPU_TICKERS_100 = [
+    # Tech
+    "AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "META", "TSLA", "AVGO",
+    "ADBE", "CRM", "AMD", "NFLX", "INTC", "QCOM", "ORCL", "TXN",
+    "NOW", "AMAT", "MU", "LRCX",
+    # Finance
+    "JPM", "V", "MA", "BAC", "WFC", "GS", "MS", "BLK", "AXP", "SCHW",
+    # Healthcare
+    "UNH", "LLY", "JNJ", "ABBV", "MRK", "PFE", "TMO", "ABT", "DHR", "AMGN",
+    # Consumer
+    "HD", "COST", "WMT", "PG", "KO", "PEP", "MCD", "NKE", "SBUX", "TGT",
+    # Industrial
+    "CAT", "GE", "HON", "UPS", "RTX", "BA", "LMT", "DE", "MMM", "UNP",
+    # Energy
+    "XOM", "CVX", "COP", "SLB", "EOG", "MPC", "PSX", "OXY", "VLO", "HES",
+    # Communication
+    "DIS", "CMCSA", "VZ", "T", "TMUS",
+    # Utilities / REIT
+    "NEE", "DUK", "SO", "AEP", "D",
+    # Other
+    "BRK-B", "PM", "BMY", "LIN", "ACN", "ISRG", "PYPL", "SQ", "COIN",
+    "RIVN", "PLTR", "SNOW", "PANW", "CRWD", "ZS", "DDOG", "NET",
+    "ABNB", "UBER", "DASH",
+]
+
+
 def step_predict_batch(workers=4):
-    """Step 3: Re-generate cached predictions for ALL tickers (parallel)."""
+    """Step 3: Re-generate cached predictions for ALL tickers (CPU models, parallel)."""
     tickers = _get_all_tickers()
     if not tickers:
-        print(f"[{datetime.now():%H:%M:%S}] Step 3/3 — No tickers found, skipping.")
+        print(f"[{datetime.now():%H:%M:%S}] Step 3 — No tickers found, skipping.")
         return
 
     styles = ["swing", "ultra_short"]
     grand_ok = 0
     grand_fail = 0
 
+    cpu_model_str = ",".join(CPU_MODELS)
     for style in styles:
-        print(f"[{datetime.now():%H:%M:%S}] Step 3 — Predicting {len(tickers)} tickers "
-              f"({style}) with {workers} workers...")
-        ok, fail = _run_predict_parallel(tickers, style, workers)
+        print(f"[{datetime.now():%H:%M:%S}] Step 3 — CPU models ({cpu_model_str}) × "
+              f"{len(tickers)} tickers ({style}) with {workers} workers...")
+        ok, fail = _run_predict_parallel(tickers, style, workers, model=cpu_model_str)
         grand_ok += ok
         grand_fail += fail
         print(f"  {style}: {ok} succeeded, {fail} failed")
 
-    print(f"  Total: {grand_ok} succeeded, {grand_fail} failed")
+    print(f"  CPU total: {grand_ok} succeeded, {grand_fail} failed")
+
+
+def step_predict_gpu(workers=1):
+    """Step 3b: GPU model predictions for top 100 stocks (serial — GPU shared)."""
+    # Use GPU_TICKERS_100, but filter to those actually in our database
+    all_tickers = set(_get_all_tickers())
+    tickers = [t for t in GPU_TICKERS_100 if t in all_tickers]
+    if not tickers:
+        print(f"[{datetime.now():%H:%M:%S}] Step 3b — No GPU tickers found, skipping.")
+        return
+
+    styles = ["swing", "ultra_short"]
+    grand_ok = 0
+    grand_fail = 0
+
+    gpu_model_str = ",".join(GPU_MODELS)
+    for style in styles:
+        print(f"[{datetime.now():%H:%M:%S}] Step 3b — GPU models ({gpu_model_str}) × "
+              f"{len(tickers)} tickers ({style}) with {workers} worker...")
+        ok, fail = _run_predict_parallel(tickers, style, workers, model=gpu_model_str)
+        grand_ok += ok
+        grand_fail += fail
+        print(f"  {style}: {ok} succeeded, {fail} failed")
+
+    print(f"  GPU total: {grand_ok} succeeded, {grand_fail} failed")
 
 
 def step_generate_board():
     """Step 4: Generate daily board picks from cached predictions."""
-    print(f"[{datetime.now():%H:%M:%S}] Step 4/4 — Generating board picks...")
+    print(f"[{datetime.now():%H:%M:%S}] Step 4 — Generating board picks...")
     try:
         sys.path.insert(0, os.path.join(_SCRIPT_DIR, ".."))
         from backtest_server.board_generator import generate_daily_picks
-        generate_daily_picks()
+        # CPU board: picks from CPU models across all tickers
+        generate_daily_picks(trading_style="swing", board_type="cpu")
+        # GPU board: picks from GPU models on top 100 stocks
+        generate_daily_picks(trading_style="swing", board_type="gpu")
     except Exception as e:
+        import traceback
         print(f"  Warning: Board generation failed: {e}")
+        traceback.print_exc()
+
+
+def step_pretrain_gpu():
+    """Step 2b: Pre-train GPU models if not already done."""
+    print(f"[{datetime.now():%H:%M:%S}] Step 2b — Checking GPU model pretraining...")
+    try:
+        cmd = [
+            sys.executable, "-m", "backtest_server.scheduled_scan",
+            "pretrain", "--quick-gpu",
+        ]
+        result = subprocess.run(cmd, cwd=_PROJECT_DIR, capture_output=True, text=True, timeout=3600)
+        if result.stdout:
+            for line in result.stdout.strip().split("\n")[-3:]:
+                print(f"  {line}")
+    except Exception as e:
+        print(f"  Warning: GPU pretrain check failed: {e}")
 
 
 def run_full_pipeline():
@@ -153,8 +241,9 @@ def run_full_pipeline():
 
     step_update_stock_data()
     step_dump_qlib_data()
-    step_predict_batch()
-    step_generate_board()
+    step_predict_batch()       # CPU models × all tickers
+    step_predict_gpu()         # GPU models × top 100
+    step_generate_board()      # Both CPU + GPU boards
 
     elapsed = time.time() - start
     print(f"\n[{datetime.now():%H:%M:%S}] Pipeline complete in {elapsed:.0f}s")
@@ -206,6 +295,7 @@ def main():
         step_dump_qlib_data()
         if not args.skip_predict:
             step_predict_batch()
+            step_predict_gpu()
         step_generate_board()
 
         elapsed = time.time() - start

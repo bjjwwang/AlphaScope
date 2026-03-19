@@ -4,6 +4,7 @@ Data source management: resolve provider URIs, check/download ticker data.
 import os
 import sqlite3
 import subprocess
+import sys
 import tempfile
 import pandas as pd
 
@@ -16,8 +17,7 @@ class InsufficientDataError(Exception):
     pass
 
 
-_PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-QLIB_US_DATA = os.path.join(_PROJECT_ROOT, "data", "qlib_data", "us_data")
+QLIB_US_DATA = os.path.expanduser("~/.qlib/qlib_data/us_data")
 DB_PATH = os.path.join(os.path.dirname(__file__), "data", "stock_data.db")
 
 
@@ -26,7 +26,7 @@ def resolve_provider_uri(data_source: str) -> str:
     if data_source in ("yfinance", "db"):
         return QLIB_US_DATA
     elif data_source == "baostock":
-        return os.path.join(_PROJECT_ROOT, "data", "qlib_data", "cn_data")
+        return os.path.expanduser("~/.qlib/qlib_data/cn_data")
     return QLIB_US_DATA
 
 
@@ -69,18 +69,14 @@ def download_and_dump_yfinance(ticker: str, provider_uri: str = None):
     if hasattr(df.columns, 'get_level_values') and df.columns.nlevels > 1:
         df.columns = [c[0] if isinstance(c, tuple) else c for c in df.columns]
     df.columns = [c.lower().replace(" ", "_") for c in df.columns]
-    # Strip timezone info — Qlib expects naive datetimes
-    if hasattr(df["date"].dtype, "tz") and df["date"].dtype.tz is not None:
-        df["date"] = df["date"].dt.tz_localize(None)
 
     df["symbol"] = ticker
     if "adj_close" in df.columns:
-        df["factor"] = df["adj_close"] / df["close"].replace(0, float("nan"))
+        df["factor"] = df["adj_close"] / df["close"]
     elif "adjclose" in df.columns:
-        df["factor"] = df["adjclose"] / df["close"].replace(0, float("nan"))
+        df["factor"] = df["adjclose"] / df["close"]
     else:
         df["factor"] = 1.0
-    df["factor"] = df["factor"].fillna(1.0)
     df["change"] = df["close"].pct_change()
     df = df[["symbol", "date", "open", "high", "low", "close", "volume", "change", "factor"]]
     df.to_csv(csv_path, index=False)
@@ -90,16 +86,9 @@ def download_and_dump_yfinance(ticker: str, provider_uri: str = None):
     if not dump_bin:
         raise DataDownloadError("dump_bin.py not found")
 
-    # Backup existing calendar before dump_bin (it overwrites with new data only)
-    cal_path = os.path.join(uri, "calendars", "day.txt")
-    old_dates = set()
-    if os.path.exists(cal_path):
-        with open(cal_path) as f:
-            old_dates = {line.strip() for line in f if line.strip()}
-
     # Run dump_bin
     cmd = [
-        "python", dump_bin, "dump_all",
+        sys.executable, dump_bin, "dump_all",
         "--csv_path" if _dump_bin_uses_csv_path(dump_bin) else "--data_path", csv_dir,
         "--qlib_dir", uri,
         "--freq", "day",
@@ -111,9 +100,6 @@ def download_and_dump_yfinance(ticker: str, provider_uri: str = None):
     result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
     if result.returncode != 0:
         raise DataDownloadError(f"dump_bin failed: {result.stderr[:500]}")
-
-    # Merge calendars: union of old + new dates
-    _merge_calendar(cal_path, old_dates)
 
     # Ensure ticker is in instruments file
     ensure_ticker_in_instruments(ticker, uri)
@@ -176,8 +162,7 @@ def dump_db_to_qlib(ticker: str, provider_uri: str = None, db_path: str = None):
     df = df.rename(columns={"ticker": "symbol", "timestamp": "date"})
     df["date"] = pd.to_datetime(df["date"]).dt.strftime("%Y-%m-%d")
     if df["adj_close"].notna().any() and (df["adj_close"] != 0).any():
-        df["factor"] = df["adj_close"] / df["close"].replace(0, float("nan"))
-        df["factor"] = df["factor"].fillna(1.0)
+        df["factor"] = df["adj_close"] / df["close"]
     else:
         df["factor"] = 1.0
     df["change"] = df["close"].pct_change()
@@ -192,7 +177,7 @@ def dump_db_to_qlib(ticker: str, provider_uri: str = None, db_path: str = None):
         raise DataDownloadError("dump_bin.py not found")
 
     cmd = [
-        "python", dump_bin, "dump_all",
+        sys.executable, dump_bin, "dump_all",
         "--csv_path" if _dump_bin_uses_csv_path(dump_bin) else "--data_path", csv_dir,
         "--qlib_dir", uri,
         "--freq", "day",
@@ -260,8 +245,7 @@ def dump_all_db_to_qlib(provider_uri: str = None, db_path: str = None, log_fn=No
     df = df.rename(columns={"ticker": "symbol", "timestamp": "date"})
     df["date"] = pd.to_datetime(df["date"]).dt.strftime("%Y-%m-%d")
     if df["adj_close"].notna().any() and (df["adj_close"] != 0).any():
-        df["factor"] = df["adj_close"] / df["close"].replace(0, float("nan"))
-        df["factor"] = df["factor"].fillna(1.0)
+        df["factor"] = df["adj_close"] / df["close"]
     else:
         df["factor"] = 1.0
     df["change"] = df.groupby("symbol")["close"].pct_change(fill_method=None)
@@ -280,7 +264,7 @@ def dump_all_db_to_qlib(provider_uri: str = None, db_path: str = None, log_fn=No
         raise DataDownloadError("dump_bin.py not found")
 
     cmd = [
-        "python", dump_bin, "dump_all",
+        sys.executable, dump_bin, "dump_all",
         "--csv_path" if _dump_bin_uses_csv_path(dump_bin) else "--data_path", csv_dir,
         "--qlib_dir", uri,
         "--freq", "day",
@@ -333,19 +317,6 @@ def validate_data_coverage(ticker: str, train_start: str, test_end: str,
                             f"{ticker} data starts at {data_start}, but train starts at {train_start}")
                 return
     raise InsufficientDataError(f"{ticker} not found in instruments")
-
-
-def _merge_calendar(cal_path: str, old_dates: set):
-    """Merge old calendar dates with new ones written by dump_bin."""
-    new_dates = set()
-    if os.path.exists(cal_path):
-        with open(cal_path) as f:
-            new_dates = {line.strip() for line in f if line.strip()}
-    merged = sorted(old_dates | new_dates)
-    if merged:
-        os.makedirs(os.path.dirname(cal_path), exist_ok=True)
-        with open(cal_path, "w") as f:
-            f.write("\n".join(merged) + "\n")
 
 
 def _find_dump_bin():
